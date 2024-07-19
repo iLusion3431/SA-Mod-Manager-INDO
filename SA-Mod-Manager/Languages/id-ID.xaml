@@ -5,27 +5,27 @@
 
 
 	<ResourceDictionary.MergedDictionaries>
-		<ResourceDictionary Source="AboutMod/en-EN.xaml"/>
-		<ResourceDictionary Source="EditMod/en-EN.xaml"/>
-		<ResourceDictionary Source="GameConfig/en-EN.xaml"/>
-		<ResourceDictionary Source="GameConfig/Patches/en-EN.xaml"/>
-		<ResourceDictionary Source="GameConfig/TestSpawn/en-EN.xaml"/>
-		<ResourceDictionary Source="HealthProgress/en-EN.xaml"/>
-		<ResourceDictionary Source="InfoManagerUpdate/en-EN.xaml"/>
-		<ResourceDictionary Source="InstallModOptions/en-EN.xaml"/>
-		<ResourceDictionary Source="MainWindow/en-EN.xaml"/>
-		<ResourceDictionary Source="ManifestChanges/en-EN.xaml"/>
-		<ResourceDictionary Source="MessageWindow/en-EN.xaml"/>
-		<ResourceDictionary Source="ModChangelog/en-EN.xaml"/>
-		<ResourceDictionary Source="ModConfig/en-EN.xaml"/>
-		<ResourceDictionary Source="ModDependency/en-EN.xaml"/>
-		<ResourceDictionary Source="ModProfile/en-EN.xaml"/>
-		<ResourceDictionary Source="NewCode/en-EN.xaml"/>
-		<ResourceDictionary Source="SelectDependencies/en-EN.xaml"/>
-		<ResourceDictionary Source="SplashScreen/en-EN.xaml"/>
-        <ResourceDictionary Source="Updater/en-EN.xaml"/>
-        <ResourceDictionary Source="MainWindow/UpdateStatus/en-EN.xaml"/>
-		<ResourceDictionary Source="ExceptionHandler/en-EN.xaml"/>
+		<ResourceDictionary Source="AboutMod/id-ID.xaml"/>
+		<ResourceDictionary Source="EditMod/id-ID.xaml"/>
+		<ResourceDictionary Source="GameConfig/id-ID.xaml"/>
+		<ResourceDictionary Source="GameConfig/Patches/id-ID.xaml"/>
+		<ResourceDictionary Source="GameConfig/TestSpawn/id-ID.xaml"/>
+		<ResourceDictionary Source="HealthProgress/id-ID.xaml"/>
+		<ResourceDictionary Source="InfoManagerUpdate/id-ID.xaml"/>
+		<ResourceDictionary Source="InstallModOptions/id-ID.xaml"/>
+		<ResourceDictionary Source="MainWindow/id-ID.xaml"/>
+		<ResourceDictionary Source="ManifestChanges/id-ID.xaml"/>
+		<ResourceDictionary Source="MessageWindow/id-ID.xaml"/>
+		<ResourceDictionary Source="ModChangelog/id-ID.xaml"/>
+		<ResourceDictionary Source="ModConfig/eid-ID.xaml"/>
+		<ResourceDictionary Source="ModDependency/id-ID.xaml"/>
+		<ResourceDictionary Source="ModProfile/id-ID.xaml"/>
+		<ResourceDictionary Source="NewCode/id-ID.xaml"/>
+		<ResourceDictionary Source="SelectDependencies/id-ID.xaml"/>
+		<ResourceDictionary Source="SplashScreen/id-ID.xaml"/>
+        <ResourceDictionary Source="Updater/id-ID.xaml"/>
+        <ResourceDictionary Source="MainWindow/UpdateStatus/id-ID.xaml"/>
+		<ResourceDictionary Source="ExceptionHandler/id-ID.xaml"/>
 	</ResourceDictionary.MergedDictionaries>
     
     <!--Region Common UI-->
@@ -35,40 +35,40 @@
 	<system:String x:Key="CommonStrings.No">Tidak</system:String>
 	<system:String x:Key="CommonStrings.Retry">Coba Lagi</system:String>
 	<system:String x:Key="CommonStrings.Warning">Peringatan</system:String>
-	<system:String x:Key="CommonStrings.Error">Error</system:String>
+	<system:String x:Key="CommonStrings.Error">Gangguan</system:String>
     <system:String x:Key="CommonStrings.Reset">Reset</system:String>
     <system:String x:Key="CommonStrings.Create">Buat</system:String>
 	<system:String x:Key="CommonStrings.SelectAll">Pilih Semua</system:String>
-	<system:String x:Key="CommonStrings.DeselectAll">Deselect All</system:String>
-	<system:String x:Key="CommonStrings.Name">Name</system:String>
+	<system:String x:Key="CommonStrings.DeselectAll">Batalkan Semua Pilihan</system:String>
+	<system:String x:Key="CommonStrings.Name">Nama</system:String>
 	<system:String x:Key="CommonStrings.Status">Status</system:String>
-	<system:String x:Key="CommonStrings.Save">Save</system:String>
-	<system:String x:Key="CommonStrings.Author">Author</system:String>
-	<system:String x:Key="CommonStrings.Version">Version</system:String>
-	<system:String x:Key="CommonStrings.Category">Category</system:String>
-	<system:String x:Key="CommonStrings.Description">Description:</system:String>
-	<system:String x:Key="CommonStrings.Search">Search</system:String>
+	<system:String x:Key="CommonStrings.Save">Simpan</system:String>
+	<system:String x:Key="CommonStrings.Author">Pembuat</system:String>
+	<system:String x:Key="CommonStrings.Version">Versi</system:String>
+	<system:String x:Key="CommonStrings.Category">Kategori</system:String>
+	<system:String x:Key="CommonStrings.Description">Deskripsi:</system:String>
+	<system:String x:Key="CommonStrings.Search">Cari</system:String>
 	<system:String x:Key="CommonStrings.Credits">Credits</system:String>
-	<system:String x:Key="CommonStrings.Download">Download</system:String>
-	<system:String x:Key="CommonStrings.OpenFolder">Open Folder</system:String>
-    <system:String x:Key="CommonStrings.None">None</system:String>
-    <system:String x:Key="CommonStrings.Enabled">Enabled</system:String>
-    <system:String x:Key="CommonStrings.Disabled">Disabled</system:String>
-    <system:String x:Key="CommonStrings.Success">Success!</system:String>
-    <system:String x:Key="CommonStrings.Failed">Failed</system:String>
+	<system:String x:Key="CommonStrings.Download">Unduh</system:String>
+	<system:String x:Key="CommonStrings.OpenFolder">Buka Berkas</system:String>
+    <system:String x:Key="CommonStrings.None">tidak ada</system:String>
+    <system:String x:Key="CommonStrings.Enabled">Di Aktifkan</system:String>
+    <system:String x:Key="CommonStrings.Disabled">Tidak Di Aktifkan</system:String>
+    <system:String x:Key="CommonStrings.Success">Berhasil!</system:String>
+    <system:String x:Key="CommonStrings.Failed">Gagal</system:String>
 	<system:String x:Key="CommonStrings.ID">ID</system:String>
-	<system:String x:Key="CommonString.Dependency">Dependency</system:String>
+	<system:String x:Key="CommonString.Dependency">Ketergantungan</system:String>
 
     <!--Region Create Code-->
-    <system:String x:Key="CommonStrings.Type">Type</system:String>
-    <system:String x:Key="CommonStrings.TypeCode">Code</system:String>
-    <system:String x:Key="CommonStrings.TypePatch">Patch</system:String>
-    <system:String x:Key="CommonStrings.IsRequired">Is Required</system:String>
+    <system:String x:Key="CommonStrings.Type">Ketik</system:String>
+    <system:String x:Key="CommonStrings.TypeCode">Kode</system:String>
+    <system:String x:Key="CommonStrings.TypePatch">Tambalan</system:String>
+    <system:String x:Key="CommonStrings.IsRequired">Dibutuhkan</system:String>
 
     <!--Window Tips-->
-	<system:String x:Key="Window.Tips.Minimize">Minimize</system:String>
-	<system:String x:Key="Window.Tips.Maximize">Maximize</system:String>
-	<system:String x:Key="Window.Tips.Restore">Restore window</system:String>
-	<system:String x:Key="Window.Tips.Close">Close</system:String>
+	<system:String x:Key="Window.Tips.Minimize">Minimalkan</system:String>
+	<system:String x:Key="Window.Tips.Maximize">Maksimalkan</system:String>
+	<system:String x:Key="Window.Tips.Restore">Pulihkan jendela</system:String>
+	<system:String x:Key="Window.Tips.Close">Tutup</system:String>
 
 </ResourceDictionary>
