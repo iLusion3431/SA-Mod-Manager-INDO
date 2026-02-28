@@ -38,7 +38,11 @@
 	<system:String x:Key="Manager.Tabs.Codes.MadeBy">Зроблено (ким)</system:String>
 	<!--#endregion-->
 
-	<!--#region Manager Config Tab Strings-->
+    <!--Game-->
+    <system:String x:Key="Manager.Buttons.AddGame">Add Game...</system:String>
+    <!--#endregion-->
+
+    <!--#region Manager Config Tab Strings-->
 	<!--Options-->
 	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options">Налаштування</system:String>
 	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Theme">Теми:</system:String>
@@ -63,7 +67,8 @@
 	<!--Debug Features-->
 	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Group.Updates.Group.Advanced">Розширені Налаштування</system:String>
 	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Group.Updates.Group.Advanced.Check.KeepOpen">Залишати Завантажувач Модів відкритим після запуску гри</system:String>
-	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Group.Updates.Group.Advanced.Check.Developer">Увімкнути Налаштування Розробника</system:String>
+    <system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Group.Updates.Group.Advanced.Check.KeepModOrder">Maintain Mod Order</system:String>
+    <system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Group.Updates.Group.Advanced.Check.Developer">Увімкнути Налаштування Розробника</system:String>
 	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Group.Updates.Group.Advanced.Check.Console">Увімкнути Консоль</system:String>
 	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Group.Updates.Group.Advanced.Check.PrintDebug">Печатати Debug у Вікні Гри</system:String>
 	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Group.Updates.Group.Advanced.Check.LogDebug">Записувати Debug Info до файлу</system:String>
@@ -123,9 +128,7 @@
 	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.Borderless">Встановлює повне вікно гри на Повну без країв.</system:String>
     <system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.Fullscreen">Вікно гри запуститься на повний екран.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.Windowed">Гра завантажиться у віконному режимі.</system:String>
-	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.Borderless">Встановлює гру у повному екрані до без-рамок.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.ScaleScreen">Масштабує елементи UI у повному екрані.</system:String>
-	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.Windowed">Гра запуститься у віконному режимі.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.ResizeWindow">Дозволяє вікну змінювати розмір під час гри.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.MaintainAspect">Залишає співвідношення сторін вибраною роздільної здатності коли встановлено вручну.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.CustomWindow">Встановлює розмір вікна окремо від роздільної здатності. Тобто, Дозволяє грати у 4K у меншому вікні.</system:String>
@@ -134,7 +137,7 @@
 	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.TextureFiltering">Вибирає фільтр для текстур на всіх модельках.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.UIFiltering">Вибирає фільтр текстур GUI та інших пов'язаних елементів.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.DetailLevel">Встановлює кількість деталей для дальності малювання.</system:String>
-	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.BackgroundFill">Встановлює метод заповнення задньої картинки коли граєш у широко-екрані з примусовим співвідношенням сторін рендеру 4:3.</system:String>
+    <system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.BackgroundFill" xml:space="preserve">Sets the scaling mode for backgrounds&#x0a;Stretch: The backgrounds will be stretched without maintaining the aspect ratio.&#x0a;Fit: The backgrounds will be displayed with borders.&#x0a;Fill: The backgrounds will be cropped and zoomed in to display without borders.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.FMVFill">Встановлює метод заповнення коли гра прогарває FMV запис.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.Mipmap">Згенеровані MipMap текстури для всіх текстур які їх не мають.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.EnableD3D8to9">Вмикає D3D8to9 Shim, дозволяючи грі використовувати функції D3D9. Необхідно для деяких модів.</system:String>
@@ -197,7 +200,8 @@
 	<system:String x:Key="MainWindow.Tips.Tab.Options.Theme">Вибирає тему для Мод Менеджера.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.Options.Language">Вибирає мову яка встановлюється Мод Менеджером.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.Options.KeepOpen">Залишає вікно Мод Менеджера відкритим після натискання Зберегти та Грати.</system:String>
-	<system:String x:Key="MainWindow.Tips.Tab.Options.TestSpawn">Вмикає сорінку Тестового Завантаження у Мод Менеджері.</system:String>
+    <system:String x:Key="MainWindow.Tips.Tab.Options.KeepModOrder">Checked mods will no longer be moved when saving after checking them.</system:String>
+    <system:String x:Key="MainWindow.Tips.Tab.Options.TestSpawn">Вмикає сорінку Тестового Завантаження у Мод Менеджері.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.Options.EnableOneClick">Коли увімкнено, натискаючи на посилання "One Click" на GameBanana відкриє вікно завантаження моду.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.Options.InstallLoader">Коли увімкнено, Завантажувач Модів встановлено і можна грати з модами, патчами і чітами.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.Options.ManagerUpdates">Автоматично перевіряє оновлення Мод Менеджеру при запуску.</system:String>

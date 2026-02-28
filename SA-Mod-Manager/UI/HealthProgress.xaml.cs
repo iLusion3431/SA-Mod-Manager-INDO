@@ -29,9 +29,9 @@ namespace SAModManager.UI
         public static List<FileStatus> Fails { get; set; } = new();
 
         public bool Failed = false;
-        SetGame game = SetGame.SADX;
+		GameEntry.GameType game = GameEntry.GameType.Unsupported;
 
-        public HealthChecker(SetGame game)
+        public HealthChecker(GameEntry.GameType game)
         {
             InitializeComponent();
             this.game = game;
@@ -76,7 +76,7 @@ namespace SAModManager.UI
 
                     foreach (string hash in file.Hashes)
                     {
-                        if (hash == currenthash)
+                        if (hash.Equals(currenthash, StringComparison.CurrentCultureIgnoreCase))
                         {
                             return StatusValue.Good;
                         }
@@ -108,34 +108,41 @@ namespace SAModManager.UI
 
             try
             {
-   
+
                 if (File.Exists(filename))
                 {
                     byte[] hash;
-                    using (SHA256 sha = SHA256.Create())
+                    using FileStream stream = File.OpenRead(filename);
+                    using BinaryReader binr = new(stream);
+
+                    // Move the stream's position to 0x004DB2A0 (start reading from this offset)
+                    stream.Seek(0x004DB2A0, SeekOrigin.Begin);
+
+                    byte[] checkrange = new byte[50445648];
+
+                    // Read data into checkrange array
+                    int bytesRead = stream.Read(checkrange, 0, 50445648);
+
+                    if (bytesRead == 50445648)
                     {
-                        using (FileStream stream = File.OpenRead(filename))
+                        hash = SHA256.HashData(checkrange);
+
+                        string hashed = string.Concat(hash.Select(x => x.ToString("x2")));
+
+                        foreach (string filehash in file.Value.Hashes)
                         {
-                            using (BinaryReader binr = new BinaryReader(stream))
+                            if (hashed.Equals(filehash, StringComparison.CurrentCultureIgnoreCase))
                             {
-                                byte[] checkrange = new byte[50445648];
-                                stream.Read(checkrange, 0x004DB2A0, 50445648);
-                                hash = sha.ComputeHash(checkrange);
+                                statusValue = StatusValue.Good;
+                                break;
                             }
                         }
                     }
-
-                    string hashed = string.Concat(hash.Select(x => x.ToString("x2")));
-
-                    foreach (string filehash in file.Value.Hashes)
-                    {
-                        if (hashed == filehash)
-                            statusValue = StatusValue.Good;
-                        break;
-                    }
                 }
                 else
+                {
                     statusValue = StatusValue.NotFound;
+                }
             } catch { }
 
             return new(Path.GetFileName(file.Value.Filename), statusValue);
@@ -245,18 +252,18 @@ namespace SAModManager.UI
 
         private async void OnLoaded(object sender, RoutedEventArgs e)
         {
-            using (var task = new Task(() =>
+            using var task = new Task(() =>
             {
                 switch (game)
                 {
                     default:
-                    case SetGame.SADX:
+                    case GameEntry.GameType.SADX:
                         using (MemoryStream stream = new(Properties.Resources.SADXFileHashes))
                         {
                             Files = IniSerializer.Deserialize<Dictionary<int, HealthInfo>>(IniFile.Load(stream));
                         }
                         break;
-                    case SetGame.SA2:
+                    case GameEntry.GameType.SA2:
                         using (MemoryStream stream = new(Properties.Resources.SA2FileHashes))
                         {
                             Files = IniSerializer.Deserialize<Dictionary<int, HealthInfo>>(IniFile.Load(stream));
@@ -277,19 +284,23 @@ namespace SAModManager.UI
 
                         FileStatus status;
 
-                        if (game == SetGame.SADX && file.Value.Filename == "sonic.exe")
+                        if (game == GameEntry.GameType.SADX && file.Value.Filename.Equals("sonic.exe", StringComparison.CurrentCultureIgnoreCase))
+                        {
                             status = SADXExecutableCheck(file);
+                        }
                         else
+                        {
                             status = new(Path.GetFileName(file.Value.Filename), FileStatus.GetFileStatus(App.CurrentGame.gameDirectory, file.Value));
+                        }
 
                         if (status.Status != FileStatus.StatusValue.Good)
                         {
                             switch (game)
                             {
-                                case SetGame.SADX:
+                                case GameEntry.GameType.SADX:
                                     SADXRecheck(status, file.Value);
                                     break;
-                                case SetGame.SA2:
+                                case GameEntry.GameType.SA2:
                                     SA2Recheck(status, file.Value);
                                     break;
                             }
@@ -299,7 +310,7 @@ namespace SAModManager.UI
                             Fails.Add(status);
                     }
                 }
-                catch (Exception ex) 
+                catch (Exception ex)
                 {
                     Application.Current.Dispatcher.Invoke(() =>
                     {
@@ -309,56 +320,54 @@ namespace SAModManager.UI
                         exception.ShowDialog();
                     });
                 }
-            }))
+            });
+            task.Start();
+
+            while (!task.IsCompleted && !task.IsCanceled)
             {
-                task.Start();
+                await Dispatcher.Yield(DispatcherPriority.Background);
+            }
 
-                while (!task.IsCompleted && !task.IsCanceled)
+            if (Fails.Count > 0)
+            {
+                StringBuilder sb = new StringBuilder();
+                foreach (FileStatus file in Fails)
                 {
-                    await Dispatcher.Yield(DispatcherPriority.Background);
-                }
-
-                if (Fails.Count > 0)
-                {
-                    StringBuilder sb = new StringBuilder();
-                    foreach (FileStatus file in Fails)
+                    switch (file.Status)
                     {
-                        switch (file.Status)
-                        {
-                            case FileStatus.StatusValue.Modified:
-                                sb.AppendLine(file.Filename + " " + Lang.GetString("HealthProgress.Files.Modified"));
-                                break;
-                            case FileStatus.StatusValue.NotFound:
-                                sb.AppendLine(file.Filename + " " + Lang.GetString("HealthProgress.Files.Missing"));
-                                break;
-                        }
+                        case FileStatus.StatusValue.Modified:
+                            sb.AppendLine(file.Filename + " " + Lang.GetString("HealthProgress.Files.Modified"));
+                            break;
+                        case FileStatus.StatusValue.NotFound:
+                            sb.AppendLine(file.Filename + " " + Lang.GetString("HealthProgress.Files.Missing"));
+                            break;
                     }
-
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        MessageWindow failedFiles = new(Lang.GetString("MessageWindow.Information.HealthCheck.FailedFiles.Title"),
-                            Lang.GetString("MessageWindow.Information.HealthCheck.FailedFiles1") + "\n\n" +
-                            sb.ToString() + "\n\n" + Lang.GetString("MessageWindow.Information.HealthCheck.FailedFiles2"),
-                            type: MessageWindow.WindowType.IconMessage, icon: MessageWindow.Icons.Information, button: MessageWindow.Buttons.OK);
-
-                        failedFiles.ShowDialog();
-                    });
                 }
-                else
+
+                Application.Current.Dispatcher.Invoke(() =>
                 {
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        MessageWindow success = new(Lang.GetString("MessageWindow.Information.HealthCheck.Verified.Title"), Lang.GetString("MessageWindow.Information.HealthCheck.Verified"),
+                    MessageWindow failedFiles = new(Lang.GetString("MessageWindow.Information.HealthCheck.FailedFiles.Title"),
+                        Lang.GetString("MessageWindow.Information.HealthCheck.FailedFiles1") + "\n\n" +
+                        sb.ToString() + "\n\n" + Lang.GetString("MessageWindow.Information.HealthCheck.FailedFiles2"),
                         type: MessageWindow.WindowType.IconMessage, icon: MessageWindow.Icons.Information, button: MessageWindow.Buttons.OK);
 
-                        success.ShowDialog();
-                    });
-
-                }
-
-                Fails.Clear();
-                DialogResult = true;
+                    failedFiles.ShowDialog();
+                });
             }
+            else
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    MessageWindow success = new(Lang.GetString("MessageWindow.Information.HealthCheck.Verified.Title"), Lang.GetString("MessageWindow.Information.HealthCheck.Verified"),
+                    type: MessageWindow.WindowType.IconMessage, icon: MessageWindow.Icons.Information, button: MessageWindow.Buttons.OK);
+
+                    success.ShowDialog();
+                });
+
+            }
+
+            Fails.Clear();
+            DialogResult = true;
         }
 
         private void UpdateStatus(string status)

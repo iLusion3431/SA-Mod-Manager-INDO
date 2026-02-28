@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Policy;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -75,12 +76,7 @@ namespace SAModManager.Updater
                 this.dest = dest;
             }
 
-            try
-            {
-                Directory.CreateDirectory(this.dest);
-
-            }
-            catch { }
+            Util.CreateSafeDirectory(this.dest);
         }
 
         private void UpdateHeaderTextDirect(string txt)
@@ -135,8 +131,8 @@ namespace SAModManager.Updater
                 });
             }
             catch { }
-        }       
-        
+        }
+
         private void ResetCurFileText()
         {
             try
@@ -175,22 +171,42 @@ namespace SAModManager.Updater
             });
         }
 
-        private async Task Extracting(string dataDir, string filePath)
+        private async Task<bool> Extracting(string dataDir, string filePath)
         {
+            string failed = "Failed to extract '" + filePath + "'\n at " + dataDir + "\n\n";
+            string isValid = Path.GetExtension(filePath);
+
+            if (Util.IsStringValid(isValid) == false)
+            {
+                await Dispatcher.InvokeAsync(() =>
+                {
+
+                    var error = new MessageWindow(Lang.GetString("Updater.DL.Mod.ManifestApplyFail"), failed, MessageWindow.WindowType.IconMessage, MessageWindow.Icons.Error, MessageWindow.Buttons.OK);
+                    error.ShowDialog();
+                });
+                return false;
+            }
+
             try
             {
                 UpdateHeaderTextDirect(Lang.GetString("Updater.DL.Mod.Extracting"));
-                if (!Directory.Exists(dataDir))
-                {
-                    Directory.CreateDirectory(dataDir);
-                }
-
-                await Util.ExtractArchive(filePath, dataDir, true);
+                Util.CreateSafeDirectory(dataDir);
+                await Util.ExtractArchive(filePath, dataDir, null, true);
+                return true;
             }
             catch (Exception ex)
             {
-                throw new Exception("Failed to extract '" + filePath + "'\n at " + dataDir + "\n\n", ex);
+                failed += ex;
             }
+
+            await Dispatcher.InvokeAsync(() =>
+            {
+       
+                var error = new MessageWindow(Lang.GetString("Updater.DL.Mod.ManifestApplyFail"), failed, MessageWindow.WindowType.IconMessage, MessageWindow.Icons.Error, MessageWindow.Buttons.OK);
+                error.ShowDialog();
+            });
+
+            return false;
         }
 
         private async Task ParseManifestAndAdjustFiles(ModDownload file, string filePath, string dataDir)
@@ -201,12 +217,12 @@ namespace SAModManager.Updater
                 string[] subfolders = Directory.GetDirectories(dataDir);
 
                 //if the mod didn't come with any folder, create one and move all the files there
-                if (File.Exists(Path.Combine(dataDir, "mod.ini"))) 
+                if (File.Exists(Path.Combine(dataDir, "mod.ini")))
                 {
                     string newDirectory = Path.Combine(dataDir, Path.GetFileName(filePath) + "_Dir");
-                    Directory.CreateDirectory(newDirectory);
+                    Util.CreateSafeDirectory(newDirectory);
 
-                    foreach (string subfolder in subfolders) 
+                    foreach (string subfolder in subfolders)
                     {
                         if (Directory.Exists(subfolder))
                             Directory.Move(subfolder, Path.Combine(newDirectory, Path.GetFileName(subfolder)));
@@ -300,10 +316,8 @@ namespace SAModManager.Updater
                 if (!string.IsNullOrEmpty(dir))
                 {
                     string newDir = Path.Combine(mod.Folder, dir);
-                    if (!Directory.Exists(newDir))
-                    {
-                        Directory.CreateDirectory(newDir);
-                    }
+                    Util.CreateSafeDirectory(newDir);
+
                 }
 
                 var sourceFile = new FileInfo(Path.Combine(workDir, file.FilePath));
@@ -342,20 +356,16 @@ namespace SAModManager.Updater
                 string tempDir = Path.Combine(updatePath, uri.Segments.Last());
                 var httpClient = UpdateHelper.HttpClient;
 
-                if (!Directory.Exists(tempDir))
-                {
-                    Directory.CreateDirectory(tempDir);
-                }
-
+                Util.CreateSafeDirectory(tempDir);
+                Path.Combine(dest, Path.GetFileName(uri.LocalPath));
                 foreach (ModManifestDiff i in newEntries)
                 {
                     string filePath = Path.GetFullPath(Path.Combine(tempDir, i.Current.FilePath));
+                    currentFilePath = filePath;
                     string dir = Path.GetDirectoryName(filePath);
 
-                    if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                    {
-                        Directory.CreateDirectory(dir);
-                    }
+
+                    Util.CreateSafeDirectory(dir);
 
                     var info = new FileInfo(filePath);
 
@@ -418,10 +428,9 @@ namespace SAModManager.Updater
 
                     string dir = Path.GetDirectoryName(newPath);
 
-                    if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                    {
-                        Directory.CreateDirectory(dir);
-                    }
+
+                    Util.CreateSafeDirectory(dir);
+
 
                     await Util.CopyFileAsync(oldPath, newPath, true);
                 }
@@ -434,10 +443,9 @@ namespace SAModManager.Updater
                     string workPath = Path.Combine(file.Folder, i.Current.FilePath);
                     string dir = Path.GetDirectoryName(workPath);
 
-                    if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                    {
-                        Directory.CreateDirectory(dir);
-                    }
+
+                    Util.CreateSafeDirectory(dir);
+
 
                     await Util.CopyFileAsync(tempPath, workPath, true);
                 }
@@ -521,8 +529,6 @@ namespace SAModManager.Updater
                 Directory.Delete(dataDir, true);
             }
 
-            File.WriteAllText(Path.Combine(file.Folder, "mod.version"), file.Updated.ToString(DateTimeFormatInfo.InvariantInfo));
-
             if (File.Exists(filePath))
             {
                 File.Delete(filePath);
@@ -539,6 +545,7 @@ namespace SAModManager.Updater
                 {
                     UpdateProgressText(count.ToString(), updates.Count.ToString());
                     _progressOverall?.Report(count);
+
                 }
                 catch { }
 
@@ -556,8 +563,11 @@ namespace SAModManager.Updater
                     dataDir = Path.Combine(this.dest, dataDir);
                     if (File.Exists(filePath))
                     {
-                        await Extracting(dataDir, filePath);
-                        await ParseManifestAndAdjustFiles(mod, filePath, dataDir);
+                        if (await Extracting(dataDir, filePath))
+                        {
+                            await ParseManifestAndAdjustFiles(mod, filePath, dataDir);
+                            File.WriteAllText(Path.Combine(mod.Folder, "mod.version"), mod.Updated.ToString(DateTimeFormatInfo.InvariantInfo));
+                        }
                     }
                     CleanUp(mod, dataDir, filePath);
                 }

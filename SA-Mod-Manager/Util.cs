@@ -2,19 +2,22 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using SAModManager.UI;
 using SAModManager.Updater;
 using System.Diagnostics;
 using System.IO.Compression;
-using SAModManager.Ini;
 using Microsoft.Win32;
 using System.Security.Principal;
-using SAModManager.Configuration.SADX;
-using SAModManager.Configuration.SA2;
-using SAModManager.Configuration;
+using System.Reflection;
+using NetCoreInstallChecker.Structs.Config;
+using NetCoreInstallChecker;
+using NetCoreInstallChecker.Structs.Config.Enum;
+using SharpCompress.Archives;
+using SharpCompress.Common;
+using SharpCompress.Readers;
+using SharpCompress.Archives.SevenZip;
 
 namespace SAModManager
 {
@@ -37,7 +40,6 @@ namespace SAModManager
             "Newtonsoft.Json.dll",
             "SADXModManager.exe",
         };
-
 
         public static List<string> BASSFiles = new()
         {
@@ -140,6 +142,13 @@ namespace SAModManager
 
         public static async Task<bool> MoveFileAsync(string sourceFile, string destinationFile, bool overwrite)
         {
+            if (File.Exists(destinationFile) && overwrite == false)
+            {
+                Console.WriteLine($"Skipped copy, file already exist.", destinationFile);
+                return false;
+            }
+
+
             try
             {
                 await Task.Run(() => File.Move(sourceFile, destinationFile, overwrite));
@@ -168,7 +177,6 @@ namespace SAModManager
             }
         }
 
-
         public static async Task MoveFile(string origin, string dest, bool overwrite = false)
         {
             try
@@ -195,12 +203,33 @@ namespace SAModManager
             }
         }
 
+		public static void CopyAllFiles(string sourceDirectory, string destinationDirectory, bool overwrite = true)
+		{
+			if (Directory.Exists(sourceDirectory))
+			{
+				Directory.CreateDirectory(destinationDirectory);
+				DirectoryInfo sDir = new DirectoryInfo(sourceDirectory);
+				DirectoryInfo dDir = new DirectoryInfo(destinationDirectory);
+
+				foreach (FileInfo fileInfo in sDir.GetFiles())
+				{
+					string destName = Path.Combine(dDir.FullName, fileInfo.Name);
+					fileInfo.CopyTo(destName, true);
+				}
+
+				foreach (DirectoryInfo subDir in sDir.GetDirectories())
+				{
+					CopyAllFiles(subDir.FullName, Path.Combine(destinationDirectory, subDir.Name), overwrite);
+				}
+			}
+		}
+
         public static bool ExtractEmbeddedDLL(byte[] resource, string resourceName, string outputDirectory)
         {
             string outputFilePath = null;
             try
             {
-                Directory.CreateDirectory(outputDirectory);
+                Util.CreateSafeDirectory(outputDirectory);
                 outputFilePath = Path.Combine(outputDirectory, resourceName + ".dll");
 
                 // Get the resource stream from Properties.Resources
@@ -217,55 +246,9 @@ namespace SAModManager
                 return false;
             }
 
-            FileInfo fileInfo = new(outputFilePath);
-            return fileInfo is not null && fileInfo.Length > 0;
+            return true;
         }
 
-
-
-        public static async Task Install7Zip()
-        {
-            try
-            {
-                if (!IsZipToolInstalled())
-                {
-                    await Exec7zipInstall();
-                }
-            }
-            catch
-            {
-                throw new Exception("What");
-            }
-        }
-
-        public static bool IsZipToolInstalled()
-        {
-            string exePath = FindExePath("7z.exe");
-
-            if (exePath != null)
-                return true;
-
-            exePath = FindExePathFromRegistry("SOFTWARE\\7-Zip");
-
-            if (exePath != null)
-                return true;
-
-            exePath = Environment.GetEnvironmentVariable("PATH")
-                .Split(';')
-                .Select(s => Path.Combine(s, "7z.exe"))
-                .FirstOrDefault(File.Exists);
-
-            if (exePath != null)
-                return true;
-
-            if (Registry.LocalMachine.OpenSubKey("SOFTWARE\\WinRAR") != null ||
-                RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64).OpenSubKey("SOFTWARE\\WinRAR") != null)
-            {
-                return true;
-            }
-
-            return false;
-        }
 
         private static string FindExePath(string exeName)
         {
@@ -283,7 +266,6 @@ namespace SAModManager
             return key?.GetValue("Path") as string;
         }
 
-
         public static async Task Exec7zipInstall()
         {
 
@@ -300,7 +282,7 @@ namespace SAModManager
                      {
                          new DownloadInfo("7-zip", "7z.exe", App.tempFolder, uri, DownloadDialog.DLType.Download)
                      };
-         
+
                      var dl = new DownloadDialog(info);
                      dl.StartDL();
                  }
@@ -358,10 +340,99 @@ namespace SAModManager
             catch { }
         }
 
-
-        public static async Task ExtractArchive(string zipPath, string destFolder, bool overwrite = false)
+        private static async Task<bool> ExtractWithSharpCompressSpecificFolder(string zipPath, string specificFolder, string destFolder)
         {
-            Directory.CreateDirectory(destFolder);
+            try
+            {
+                await Task.Run(() =>
+                {
+                    using var archive = ArchiveFactory.Open(zipPath);
+
+                    foreach (var entry in archive.Entries)
+                    {
+                        if (!entry.IsDirectory && entry.Key.StartsWith(specificFolder, StringComparison.OrdinalIgnoreCase))
+                        {
+                            string destinationPath = Path.Combine(destFolder, entry.Key);
+                            Util.CreateSafeDirectory(Path.GetDirectoryName(destinationPath));
+                            entry.WriteToFile(destinationPath, new ExtractionOptions()
+                            {
+                                ExtractFullPath = true,
+                                Overwrite = true
+                            });
+                        }
+                    }
+                });
+
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static async Task<bool> ExtractWithSharpCompress(string zipPath, string destFolder, List<string> excludeFolder = null)
+        {
+
+            try
+            {
+                await Task.Run(() =>
+                {
+                    using var archive = ArchiveFactory.Open(zipPath);
+
+                    if (excludeFolder is null)
+                    {
+                        using (var reader = archive.ExtractAllEntries())
+                        {
+                            reader.WriteAllToDirectory(destFolder, new ExtractionOptions()
+                            {
+                                ExtractFullPath = true,
+                                Overwrite = true
+
+                            });
+                        }
+
+                    }
+                    else
+                    {
+
+                        foreach (var entry in archive.Entries)
+                        {
+                            bool skip = false;
+                            foreach (string exclude in excludeFolder)
+                            {
+                                if (entry.Key.StartsWith(exclude, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    skip = true;
+                                }
+                            }
+
+                            if (skip)
+                                continue;
+
+                            if (!entry.IsDirectory)
+                            {
+                                string destinationPath = Path.Combine(destFolder, entry.Key);
+                                Util.CreateSafeDirectory(Path.GetDirectoryName(destinationPath));
+                                entry.WriteToFile(destinationPath);
+                            }
+                        }
+
+                    }
+                });
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public static async Task ExtractArchive(string zipPath, string destFolder, List<string> excludeFolder = null, bool overwrite = false)
+        {
+            Util.CreateSafeDirectory(destFolder);
 
             if (Path.GetExtension(zipPath) == ".zip")
             {
@@ -369,19 +440,56 @@ namespace SAModManager
                 return;
             }
 
-            if (await ExtractArchiveUsing7Zip(zipPath, destFolder) == false)
+            if (await ExtractWithSharpCompress(zipPath, destFolder, excludeFolder) == false)
             {
-                if (await ExtractArchiveUsingWinRAR(zipPath, destFolder) == false)
+                if (await ExtractArchiveUsing7Zip(zipPath, destFolder, excludeFolder) == false)
                 {
                     await Exec7zipInstall();
-                    await ExtractArchiveUsing7Zip(zipPath, destFolder);
+                    await ExtractArchiveUsing7Zip(zipPath, destFolder, excludeFolder);
+
                 }
             }
 
-            await Task.Delay(500);
+            await Task.Delay(150);
         }
 
-        public static async Task<bool> ExtractArchiveUsing7Zip(string path, string dest)
+        public static async Task ExtractSpecificFile(string zipPath, string specificFile, string destFolder)
+        {
+            Util.CreateSafeDirectory(destFolder);
+
+            if (await ExtractWithSharpCompressSpecificFolder(zipPath, specificFile, destFolder) == false)
+            {
+                if (await ExtractArchiveUsing7Zip(zipPath, destFolder, null, specificFile) == false)
+                {
+                    await Exec7zipInstall();
+                    await ExtractArchiveUsing7Zip(zipPath, destFolder, null, specificFile);
+
+                }
+            }
+
+            await Task.Delay(150);
+        }
+
+        public static void ExtractEmbedded7z(string resourceName, string outputDirectory)
+        {
+
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            string fullResourceName = assembly.GetName().Name + ".Resources." + resourceName;
+            using Stream resourceStream = assembly.GetManifestResourceStream(fullResourceName) ?? throw new InvalidOperationException($"Resource {resourceName} not found.");
+            using var archive = SevenZipArchive.Open(resourceStream);
+            foreach (var entry in archive.Entries)
+            {
+                if (!entry.IsDirectory)
+                {
+                    string outputPath = Path.Combine(outputDirectory, entry.Key);
+                    Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
+                    entry.WriteToFile(outputPath, new ExtractionOptions { ExtractFullPath = true, Overwrite = true });
+                }
+            }
+        }
+    
+
+        public static async Task<bool> ExtractArchiveUsing7Zip(string path, string dest, List<string> excludeFolder = null, string specificFile = null)
         {
             // Check if file exists in the root folder of the Manager
             string exePath = FindExePath("7z.exe");
@@ -399,7 +507,20 @@ namespace SAModManager
 
                 if (File.Exists(exe))
                 {
-                    await Process.Start(new ProcessStartInfo(exe, $"x \"{path}\" -o\"{dest}\" -y")
+                    string fullLine = $"x \"{path}\" -o\"{dest}\" -y";
+                    if (excludeFolder is not null && excludeFolder.Count > 0)
+                    {
+                        foreach (var banned in excludeFolder)
+                        {
+                            fullLine += $" -xr!\"{banned}\"";
+                        }
+                    }
+                    else if (Util.IsStringValid(specificFile))
+                    {
+                        fullLine += $" -ir!\"{specificFile}\\*\"";
+                    }
+
+                    await Process.Start(new ProcessStartInfo(exe, fullLine)
                     {
                         UseShellExecute = true,
                         CreateNoWindow = true,
@@ -413,38 +534,25 @@ namespace SAModManager
             return false;
         }
 
-        public static async Task<bool> ExtractArchiveUsingWinRAR(string path, string dest)
-        {
-            // Gets WinRAR's Registry Key
-            var key = Registry.LocalMachine.OpenSubKey("SOFTWARE\\WinRAR");
-
-            key ??= RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64)
-                    .OpenSubKey("SOFTWARE\\WinRAR");
-            // Checks if WinRAR is installed by checking if the key and path value exists
-            if (key != null && key.GetValue("exe64") is string exePath)
-            {
-                exePath = Path.GetFullPath(exePath);
-                // Extracts the archive to the temp directory
-                if (File.Exists(exePath))
-                {
-                    await Process.Start(new ProcessStartInfo(exePath, $"x \"{path}\" -IBCK \"{dest}\"")
-                    {
-                        UseShellExecute = true,
-                    }).WaitForExitAsync();
-
-                    key.Close();
-                    return true;
-                }
-            }
-            // WinRAR is not installed
-            return false;
-        }
-
         public static async Task Extract(string zipPath, string destFolder, bool overwrite = false)
         {
             try
             {
-                await ExtractArchive(zipPath, destFolder, overwrite);
+                await ExtractArchive(zipPath, destFolder, null, overwrite);
+            }
+            catch (Exception ex)
+            {
+                new MessageWindow(Lang.GetString("MessageWindow.DefaultTitle.Error"), ex.Message, MessageWindow.WindowType.IconMessage, MessageWindow.Icons.Error).ShowDialog();
+            }
+
+            await Task.Delay(100);
+        }
+
+        public static async Task ExtractWExcludeFile(string zipPath, string destFolder, List<string> excludeList)
+        {
+            try
+            {
+                await ExtractArchive(zipPath, destFolder, excludeList);
             }
             catch (Exception ex)
             {
@@ -516,10 +624,8 @@ namespace SAModManager
 
         public static void MoveDirectory(string sourcePath, string destinationPath)
         {
-            if (!Directory.Exists(destinationPath))
-            {
-                Directory.CreateDirectory(destinationPath);
-            }
+
+            CreateSafeDirectory(destinationPath);
 
             foreach (string file in Directory.GetFiles(sourcePath))
             {
@@ -575,6 +681,49 @@ namespace SAModManager
             return true;
         }
 
+        public static async Task<bool> Net8Check()
+        {
+            var finder = new FrameworkFinder(Environment.Is64BitOperatingSystem);
+            var resolver = new DependencyResolver(finder);
+            var framework = new Framework("Microsoft.WindowsDesktop.App", "8.0.7");
+            var options = new RuntimeOptions("net8.0", framework, RollForwardPolicy.Minor);
+            var result = resolver.Resolve(options);
+
+            if (!result.Available)
+            {
+                var res = new MessageWindow(Lang.GetString("MessageWindow.DefaultTitle.Warning"), Lang.GetString("MessageWindow.Warnings.Net8Missing"), MessageWindow.WindowType.IconMessage, MessageWindow.Icons.Warning, MessageWindow.Buttons.YesNo);
+                res.ShowDialog();
+
+                if (res.isYes != true)
+                {
+                    return false;
+                }
+
+                FrameworkDownloader frameworkDownloader = new(framework.NuGetVersion, framework.FrameworkName);
+                var url = await frameworkDownloader.GetDownloadUrlAsync(Environment.Is64BitOperatingSystem ? Architecture.Amd64 : Architecture.x86);
+                Uri uri = new(url + "\r\n");
+
+                if (url != null)
+                {
+                    string name = "aspnetcore-runtime-8.0.exe";
+                    string fullPath = Path.GetFullPath(Path.Combine(App.tempFolder, name));
+                    var netDL = new List<DownloadInfo>
+                    {
+                        new("Net Core 8.0", name, App.tempFolder, uri, DownloadDialog.DLType.Download)
+                    };
+                    var DL = new DownloadDialog(netDL);
+                    DL.StartDL();
+
+                    if (File.Exists(fullPath))
+                        Process.Start(fullPath);
+                }
+
+                return false;
+            }
+
+            return true;
+        }
+
         private static string CombinePathURL(params string[] paths)
         {
             return string.Join("/", paths);
@@ -585,7 +734,7 @@ namespace SAModManager
             if (App.isLinux && Directory.Exists(App.extLibPath) == false) //force portable mode for new users on Linux since it tends to work better.
             {
                 App.ConfigFolder = Path.Combine(App.StartDirectory, "SAManager");
-                App.extLibPath = Path.Combine(App.ConfigFolder, "extlib");
+                App.extLibPath = Path.Combine(App.CurrentGame.modLoaderDirectory, "extlib");
                 App.crashFolder = Path.Combine(App.ConfigFolder, "CrashDump");
             }
         }
@@ -633,10 +782,71 @@ namespace SAModManager
             return new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
         }
 
+        public static void RequestAdminPrivileges()
+        {
+            var processInfo = new ProcessStartInfo
+            {
+                UseShellExecute = true,
+                WorkingDirectory = Environment.CurrentDirectory,
+                FileName = AppContext.BaseDirectory,
+                Verb = "runas" // This will prompt for admin rights
+            };
+
+            try
+            {
+                Process.Start(processInfo);
+                Environment.Exit(0); // Exit the current instance
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                // The user refused the elevation
+                Console.WriteLine("The application requires administrative privileges to continue.");
+            }
+        }
+
+        public static void CreateSafeDirectory(string path)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(path) && !Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                }
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                new MessageWindow(Lang.GetString("MessageWindow.Errors.PermissionTitle"), string.Format(Lang.GetString("MessageWindow.Errors.FolderPermission"), path) + "\n\n" + ex.Message, MessageWindow.WindowType.IconMessage, MessageWindow.Icons.Error, MessageWindow.Buttons.OK).ShowDialog();
+            }
+        }
+
         public static void AdjustPathForLinux(ref string s)
         {
             if (App.isLinux && s.StartsWith("/"))
                 s = $"Z:{s}";
         }
+
+        public static bool IsStringValid(string str)
+        {
+            return !string.IsNullOrEmpty(str) && !string.IsNullOrWhiteSpace(str);
+        }
+
+        public static bool IsValidFileName(string filename)
+        {
+
+            char[] invalidChars = Path.GetInvalidFileNameChars();
+
+            // Check if the filename contains any invalid characters eg ?, " etc.
+            foreach (char c in invalidChars)
+            {
+                if (filename.Contains(c))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+
     }
 }

@@ -38,10 +38,15 @@
 	<system:String x:Key="Manager.Tabs.Codes.MadeBy">Создан</system:String>
 	<!--#endregion-->
 
-	<!--#region Manager Config Tab Strings-->
+    <!--Game-->
+    <system:String x:Key="Manager.Buttons.AddGame">Добавить игру...</system:String>
+    <!--#endregion-->
+
+    <!--#region Manager Config Tab Strings-->
 	<!--Options-->
 	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options">Настройки</system:String>
-	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Theme">Темы:</system:String>
+	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Theme">Тема:</system:String>
+	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.UpdateChannel">Канал обновления:</system:String>
 	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Lang">Язык:</system:String>
 	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Profile">Профиль:</system:String>
 	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.GameDirectory">Каталог игры:</system:String>
@@ -63,6 +68,7 @@
 	<!--Debug Features-->
 	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Group.Updates.Group.Advanced">Дополнительные настройки</system:String>
 	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Group.Updates.Group.Advanced.Check.KeepOpen">Не закрывать менеджер при запуске игры</system:String>
+	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Group.Updates.Group.Advanced.Check.KeepModOrder">Сохранять порядок модов</system:String>
 	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Group.Updates.Group.Advanced.Check.Developer">Включить опции разработчика</system:String>
 	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Group.Updates.Group.Advanced.Check.Console">Писать в консоль</system:String>
 	<system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Group.Updates.Group.Advanced.Check.PrintDebug">Вывод отладочных сообщений в игре</system:String>
@@ -134,7 +140,7 @@
 	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.TextureFiltering">Включить фильтрацию текстур для всех моделей.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.UIFiltering">Включить фильтрацию текстур для всех текстур интерфейса.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.DetailLevel">Настроить уровень детализации для дальности отрисовки.</system:String>
-	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.BackgroundFill">Установить режим заполнения фона по краям при игре в широкоформате, но с зафиксированным соотношением рендера 4:3.</system:String>
+    <system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.BackgroundFill" xml:space="preserve">Выставить режим масштабирования для фонов.&#x0a;Растянуть: фоны будут растягиваться без сохранения пропорций.&#x0a;Подогнать по ширине: фоны будут отображаться с чёрными полосами по бокам.&#x0a;Заполнение: фоны будут обрезаны и отмасштабированы для отображения без полос по бокам.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.FMVFill">Установить режим заполнения видеороликов.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.Mipmap">Генерация мипмапов для всех текстур, даже если они не требуются.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.EnableD3D8to9">Включает программную прослойку D3D8to9, позволяющую игре задействовать особенности D3D9-рендеринга. Требуется для работы некоторых модов.</system:String>
@@ -197,6 +203,7 @@
 	<system:String x:Key="MainWindow.Tips.Tab.Options.Theme">Выбор используемой темы менеджера модов.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.Options.Language">Выбор языка интерфейса менеджера модов.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.Options.KeepOpen">Оставлять менеджер модов включённым при нажатии "Сохранить и играть".</system:String>
+	<system:String x:Key="MainWindow.Tips.Tab.Options.KeepModOrder">Выбранные моды не будут перемещаться в верх списка модов после сохранения.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.Options.TestSpawn">Включить вкладку "Дебаг" в менеджере модов.</system:String>
 	<system:String x:Key="MainWindow.Tips.Tab.Options.EnableOneClick">Когда включено, при нажатии на кнопку "1-Click Install" на GameBanana будет открываться окно загрузки мода.</system:String>
     <system:String x:Key="MainWindow.Tips.Tab.Options.InstallLoader">Когда включено, активируется загрузчик модов, благодаря чему можно играть с модами, патчами и кодами.</system:String>

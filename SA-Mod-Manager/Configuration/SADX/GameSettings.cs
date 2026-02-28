@@ -9,6 +9,7 @@ using System.CodeDom.Compiler;
 using System;
 using System.Text.Json.Serialization;
 using static SAModManager.Configuration.SA2.GameSettings;
+using SAModManager.Management;
 
 namespace SAModManager.Configuration.SADX
 {
@@ -32,6 +33,13 @@ namespace SAModManager.Configuration.SADX
 			Fullscreen,
 			Borderless,
 			CustomWindow
+		}
+
+		public enum RenderBackendOptions
+		{
+			Direct3D8 = 0,
+			Direct3D9 = 1,
+			Direct3D11 = 2
 		}
 
 		/// <summary>
@@ -137,8 +145,8 @@ namespace SAModManager.Configuration.SADX
 		/// <summary>
 		/// Sets the Screen Mode (Windowed, Fullscreen, Borderless, or Custom Window)
 		/// </summary>
-		[DefaultValue(DisplayMode.Borderless)]
-		public int ScreenMode { get; set; } = (int)DisplayMode.Borderless;
+		[DefaultValue(DisplayMode.Windowed)]
+		public int ScreenMode { get; set; } = (int)DisplayMode.Windowed;
 
         /// <summary>
         /// Sets the Game's Framerate
@@ -197,6 +205,12 @@ namespace SAModManager.Configuration.SADX
 		#endregion
 
 		/// <summary>
+		/// Selected RenderBackend for use with SADX.
+		/// </summary>
+		[DefaultValue((int)RenderBackendOptions.Direct3D8)]
+		public int RenderBackend { get; set; } = (int)RenderBackendOptions.Direct3D8;
+
+		/// <summary>
 		/// Converts from original settings file.
 		/// </summary>
 		/// <param name="oldSettings"></param>
@@ -225,7 +239,8 @@ namespace SAModManager.Configuration.SADX
 			EnableUIScaling = oldSettings.ScaleHud;
 			EnableForcedMipmapping = oldSettings.AutoMipmap;
 			EnableForcedTextureFilter = oldSettings.TextureFilter;
-		}
+
+        }
 
 		public void LoadGameConfig(ref SADXConfigFile config)
 		{
@@ -594,6 +609,7 @@ namespace SAModManager.Configuration.SADX
 		}
 	}
 
+	[Obsolete]
 	public class GamePatches
 	{
 		/// <summary>
@@ -742,6 +758,7 @@ namespace SAModManager.Configuration.SADX
 			v1,		// Version 1: Initial version at launch
 			v2,		// Version 2: Updated to include all settings, intended to be used as the only loaded file, now writes SADXLoaderInfo and SADXConfigFile.
 			v3,		// Version 3: Added Graphics.StretchToWindow and Graphics.DisableBorderWindow.
+			v4,     // Version 4: Removed old Patch system entirely, moving to new modular system.
 
 			MAX,	// Do Not Modify, new versions are placed above this.
 		}
@@ -773,14 +790,14 @@ namespace SAModManager.Configuration.SADX
 		public TestSpawnSettings TestSpawn { get; set; } = new();
 
 		/// <summary>
-		/// Patches for SADX.
+		/// Game Patch List for SADX.
 		/// </summary>
-		public GamePatches Patches { get; set; } = new();
+        public Dictionary<string, bool> Patches { get; set; } = new Dictionary<string, bool>();
 
-		/// <summary>
-		/// Debug Settings.
-		/// </summary>
-		public DebugSettings DebugSettings { get; set; } = new();
+        /// <summary>
+        /// Debug Settings.
+        /// </summary>
+        public DebugSettings DebugSettings { get; set; } = new();
 
 		/// <summary>
 		/// Path to the game install saved with this configuration.
@@ -801,17 +818,19 @@ namespace SAModManager.Configuration.SADX
 		[IniCollection(IniCollectionMode.NoSquareBrackets, StartIndex = 1)]
 		public List<string> EnabledCodes { get; set; } = new();      // SADXLoaderInfo.EnabledCodes
 
-		/// <summary>
-		/// Used for Profiles Migration, for initial boot, see <see cref="LoadConfigs"/>
-		/// </summary>
-		/// <param name="oldSettings"></param>
-		public void ConvertFromV0(SADXLoaderInfo oldSettings)
+
+        public List<string> ModsList { get; set; } = new();   // used for consistent mod order option
+
+        /// <summary>
+        /// Used for Profiles Migration, for initial boot, see <see cref="LoadConfigs"/>
+        /// </summary>
+        /// <param name="oldSettings"></param>
+        public void ConvertFromV0(SADXLoaderInfo oldSettings)
 		{
 			Graphics.ConvertFromV0(oldSettings);
 			Controller.ConvertFromV0(oldSettings);
 			Sound.ConvertFromV0(oldSettings);
 			TestSpawn.ConvertFromV0(oldSettings);
-			Patches.ConvertFromV0(oldSettings);
 			DebugSettings.ConvertFromV0(oldSettings);
 
 			SettingsVersion = (int)SADXSettingsVersions.v1;
@@ -921,23 +940,26 @@ namespace SAModManager.Configuration.SADX
 				profileName += ".json";
 
 			// TODO: Fix this function
-			string path = Path.Combine(App.CurrentGame.ProfilesDirectory, profileName);
+			string path = Path.Combine(ProfileManager.GetProfilesDirectory(), profileName);
 			try
 			{
-				if (Directory.Exists(App.CurrentGame.ProfilesDirectory))
+				if (Directory.Exists(ProfileManager.GetProfilesDirectory()))
 				{
+					if (profileName == "Default" || profileName == "Default.json")
+					{
+						if (!Path.Exists(path))
+						{
+							System.Drawing.Rectangle rect = GraphicsManager.GetDisplayBounds(1);
+							if (rect.Height > 0)
+							{
+								Graphics.VerticalResolution = rect.Height;
+								Graphics.HorizontalResolution = rect.Width;
+								Graphics.ScreenMode = (int)GraphicsSettings.DisplayMode.Borderless;
+							}
+						}
+					}
 					string jsonContent = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
 					File.WriteAllText(path, jsonContent);
-				}
-				else
-				{
-					App.CurrentGame.ProfilesDirectory = Path.Combine(App.ConfigFolder, App.CurrentGame.gameAbbreviation);
-					Directory.CreateDirectory(App.CurrentGame.ProfilesDirectory);
-					if (Directory.Exists(App.CurrentGame.ProfilesDirectory))
-					{
-						string jsonContent = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-						File.WriteAllText(path, jsonContent);
-					}
 				}
 			}
 			catch

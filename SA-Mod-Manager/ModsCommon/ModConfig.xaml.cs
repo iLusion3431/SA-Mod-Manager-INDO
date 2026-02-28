@@ -1,10 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 using SAModManager.Configuration;
+using SAModManager.Themes;
 
 namespace SAModManager.ModsCommon
 {
@@ -17,6 +22,8 @@ namespace SAModManager.ModsCommon
         ConfigSettings settings;
         private static ModConfig _Instance;
         string modName = string.Empty;
+        public static List<GroupBox> allGroupBoxes = new();
+        public Grid modConfigSearch = new();
 
         public static ModConfig GetInstance()
         {
@@ -33,6 +40,7 @@ namespace SAModManager.ModsCommon
             modName = Modname;
             pathXML = path;
             Title = Lang.GetString("ModConfig.Title") + " " + modName;
+            SearchTextBox.Text = Lang.GetString("CommonStrings.Search") + "...";
             Init();
         }
 
@@ -44,6 +52,7 @@ namespace SAModManager.ModsCommon
             panel.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
             panel.VerticalAlignment = VerticalAlignment.Stretch;
             ItemsHost.Children.Add(panel);
+
         }
 
         private async Task DelayResetBtn()
@@ -70,21 +79,174 @@ namespace SAModManager.ModsCommon
             settings.Save();
             if (settings.modNeedRefresh)
                 ((MainWindow)Application.Current.MainWindow)?.Refresh();
+
             this.Close();
         }
 
         private async void ResetButton_Click(object sender, RoutedEventArgs e)
         {
+            ModConfig.allGroupBoxes.Clear();
             settings.ResetValues();
             settings.Save();
+
+            modConfigSearch.Children.Clear();
             await DelayResetBtn();
             Init();
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
+            ModConfig.allGroupBoxes.Clear();
+
             this.Close();
         }
+
+        private void Header_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is Border header)
+            {
+                var groupBox = header.TemplatedParent as GroupBox;
+
+                if (groupBox != null)
+                {
+                    // Toggle between Collapsed and Visible
+                    if (groupBox.Tag?.ToString() == "Collapsed")
+                    {
+                        groupBox.Tag = "Visible";
+                    }
+                    else
+                    {
+                        groupBox.Tag = "Collapsed";
+                    }
+
+                }
+            }
+        }
+
+        private bool IsSearchTextPlaceHolder()
+        {
+            return SearchTextBox.Text.ToLower() == Lang.GetString("CommonStrings.Search").ToLower() + "...";
+
+        }
+
+        private void ToggleHeader_GroupBox(object sender, bool toggle)
+        {
+            if (sender is GroupBox header)
+            {
+                if (header != null)
+                {
+                    // Toggle between Collapsed and Visible
+                    if (toggle)
+                    {
+                        header.Tag = "Visible";
+                    }
+                    else
+                    {
+                        header.Tag = "Collapsed";
+                    }
+
+                }
+            }
+        }
+
+        private void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+
+            if (IsSearchTextPlaceHolder())
+                return;
+
+            string searchText = SearchTextBox.Text.ToLower();
+
+            if (!Util.IsStringValid(searchText))
+            {
+                foreach (var control in FindAllControls(ItemsHost)) // Pass the grid that holds everything
+                {
+                    if (control is Label lab)
+                    {
+                        if (lab.Content is TextBlock && lab.Parent is Grid grid)
+                        {
+                            grid.Visibility = Visibility.Visible;
+                        }
+                    }
+
+                    if (control is GroupBox groupBox)
+                    {
+                        if (groupBox.Header is TextBlock)
+                        {
+                            ToggleHeader_GroupBox(groupBox, true);
+                        }
+                    }
+                }
+            }
+
+
+            scrollViewer?.ScrollToTop();
+            SearchAndFilter(searchText);
+        }
+
+        private void SearchBox_GotFocus(object sender, RoutedEventArgs e)
+        {
+            if (IsSearchTextPlaceHolder())
+            {
+                SearchTextBox.Text = "";
+            }
+
+            SearchTextBox.Foreground = ThemeBrush.GetThemeBrush("TextBox.Brushes.Foreground");
+        }
+
+        private void SearchBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            // Restore placeholder text when the TextBox loses focus and is empty
+            if (string.IsNullOrWhiteSpace(SearchTextBox.Text))
+            {
+                SearchTextBox.Foreground = ThemeBrush.GetThemeBrush("TextBox.Brushes.Placeholder");
+                SearchTextBox.Text = Lang.GetString("CommonStrings.Search") + "...";
+            }
+        }
+
+        private IEnumerable<FrameworkElement> FindAllControls(DependencyObject parent)
+        {
+            if (parent == null)
+                yield break;
+
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is FrameworkElement element)
+                {
+                    yield return element;
+
+                    // Recursively check the children of this element
+                    foreach (var subChild in FindAllControls(child))
+                    {
+                        yield return subChild;
+                    }
+                }
+            }
+        }
+
+        private void SearchAndFilter(string searchTerm)
+        {
+            foreach (var control in FindAllControls(ItemsHost)) // Pass the grid that holds everything
+            {
+                if (control is Label lab)
+                {
+                    if (lab.Content is TextBlock txt && lab.Parent is Grid grid)
+                    {
+                        if (txt.Text.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                        {
+                            grid.Visibility = Visibility.Visible;
+                        }
+                        else
+                        {
+                            grid.Visibility = Visibility.Collapsed;
+                        }
+
+                    }
+                }
+            }
+        }
+
     }
 
     public class ConfigSettings
@@ -92,8 +254,6 @@ namespace SAModManager.ModsCommon
         public ConfigSchema schema;
         public Dictionary<string, Dictionary<string, string>> configINI;
         private string configfilename;
-        public Dictionary<string, Dictionary<string, string>> modINI;
-        private string modiniFilename;
         public string modPath;
         public bool modNeedRefresh = false;
 
@@ -102,8 +262,6 @@ namespace SAModManager.ModsCommon
             modPath = path;
             schema = ConfigSchema.Load(Path.Combine(path, "configschema.xml"));
             configfilename = Path.Combine(path, "config.ini");
-            modiniFilename = Path.Combine(modPath, "mod.ini");
-            modINI = Ini.IniFile.Load(modiniFilename);
 
             if (File.Exists(configfilename))
                 configINI = Ini.IniFile.Load(configfilename);
@@ -114,27 +272,11 @@ namespace SAModManager.ModsCommon
             {
                 if (!configINI.ContainsKey(group.Name))
                     configINI.Add(group.Name, new Dictionary<string, string>());
+
                 foreach (ConfigSchemaProperty prop in group.Properties)
                 {
                     if (!configINI[group.Name].ContainsKey(prop.Name))
                         configINI[group.Name].Add(prop.Name, prop.DefaultValue);
-
-                    //for basic mods config without code injection
-                    if (modINI is not null && prop.Name.ToLower().Contains("includedir"))
-                    {
-                        if (!modINI.ContainsKey("Config"))
-                            modINI.Add("Config", new Dictionary<string, string>());
-
-                        var value = prop.DefaultValue;
-                        if (IsEnum(prop.Type) && int.TryParse(value, out int result))
-                        {
-                            var EnumProp = GetEnum(prop.Type).Members[result];
-                            value = string.IsNullOrEmpty(EnumProp.DisplayName) ? EnumProp.Name : EnumProp.DisplayName;
-                        }
-
-                        if (!modINI["Config"].ContainsKey(prop.Name))
-                            modINI["Config"].Add(prop.Name, value);
-                    }
                 }
 
 
@@ -156,11 +298,6 @@ namespace SAModManager.ModsCommon
             }
 
             Ini.IniFile.Save(configINI, configfilename);
-            if (modINI != null)
-            {
-                Ini.IniFile.Save(modINI, modiniFilename);
-            }
-              
 
             FileInfo fileInfo = new(configfilename);
 
@@ -187,9 +324,6 @@ namespace SAModManager.ModsCommon
                             var EnumProp = GetEnum(prop.Type).Members[result];
                             value = string.IsNullOrEmpty(EnumProp.DisplayName) ? EnumProp.Name : EnumProp.DisplayName;
                         }
-
-                        if (IsEnum(prop.Type))
-                            modINI["Config"][prop.Name] = value;
                     }
 
                 }
@@ -204,7 +338,6 @@ namespace SAModManager.ModsCommon
         {
             return schema.Enums.SingleOrDefault(a => a.Name == name);
         }
-
 
         public bool IsEnum(string name)
         {
@@ -230,11 +363,8 @@ namespace SAModManager.ModsCommon
                         string enumName = GetEnum(type).Members[result].DisplayName;
                         value = string.IsNullOrEmpty(enumName) ? value : enumName;
                     }
-
-                    modINI["Config"][propertyName] = value;
                 }
             }
-              
         }
     }
 
@@ -308,7 +438,6 @@ namespace SAModManager.ModsCommon
                     return i;
             return 0;
         }
-
         public void SetValue(object value)
         {
             switch (type)

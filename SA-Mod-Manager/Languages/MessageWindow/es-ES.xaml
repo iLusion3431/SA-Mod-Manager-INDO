@@ -14,10 +14,7 @@
     <system:String x:Key="MessageWindow.Errors.ModNotFound" xml:space="preserve">The following mods could not be found:&#x0a;&#x0a;</system:String>
 
     <system:String x:Key="MessageWindow.Errors.GamePathFailed.Title">Failed to set Game Path</system:String>
-    <system:String x:Key="MessageWindow.Errors.GamePathFailed">Failed to detect a supported game, make sure to select a folder where a game is installed.</system:String>
-
-    <system:String x:Key="MessageWindow.Errors.GamePathNotFound.Title">Error al detectar el Directorio del Juego</system:String>
-    <system:String x:Key="MessageWindow.Errors.GamePathNotFound">Error al detectar el directorio del juego. Por favor, configura el directorio en la configuración del manager y asegúrate de seleccionar la carpeta donde sonic.exe está instalado.</system:String>
+    <system:String x:Key="MessageWindow.Errors.GamePathFailed">Failed to detect a supported game, make sure to select a folder where a game is installed. If you renamed the original exe, the game detection won't work.</system:String>
 
     <system:String x:Key="MessageWindow.Errors.ModAlreadyExists.Title">"Mod ya existe"</system:String>
     <system:String x:Key="MessageWindow.Errors.ModAlreadyExists" xml:space="preserve">Ya existe un mod con ese nombre.&#x0a;Por favor, selecciona otro nombre o renombra el existente.</system:String>
@@ -36,8 +33,9 @@
 	
 	<system:String x:Key="MessageWindow.Errors.CodesListFailed.Title">Error al cargar el Código</system:String>
 	<system:String x:Key="MessageWindow.Errors.CodesListFailed">Error al cargar la lista de códigos</system:String>
-	
-	<system:String x:Key="MessageWindow.Errors.CheckUpdateError.Title">Error al actualizar</system:String>
+    <system:String x:Key="MessageWindow.Errors.CodeBuildFail" xml:space="preserve">Failed to build {0}, this could be a permission issue.&#x0a;&#x0a;Advanced Error:&#x0a;{1}</system:String>
+    
+    <system:String x:Key="MessageWindow.Errors.CheckUpdateError.Title">Error al actualizar</system:String>
     <system:String x:Key="MessageWindow.Errors.CheckUpdateError" xml:space="preserve">Los siguientes errores han ocurrido mientras se buscaban las actualizaciones:&#x0a;&#x0a;</system:String>
     <system:String x:Key="MessageWindow.Errors.D3D8Update">No se pudo actualizar d3d8.dll</system:String>
     <system:String x:Key="MessageWindow.Errors.D3D8UpdateCheck">No se pudo comprobar la versión de d3d8to9</system:String>
@@ -100,11 +98,16 @@
     <system:String x:Key="MessageWindow.Errors.CreateConfigFolder" xml:space="preserve">Error al crear la carpeta de configuración en {0}.&#x0a;El Mod Manager no podrá funcionar correctamente.</system:String>
     <system:String x:Key="MessageWindow.Errors.LoaderCopy" xml:space="preserve">Failed to install or update {0}.&#x0a;If the game is open, please close it and try again.</system:String>
 
-    <system:String x:Key="MessageWindow.Errors.IniKeyDuplicateTitle">Error Reading Ini File</system:String>
-    <system:String x:Key="MessageWindow.Errors.IniKeyDuplicate" xml:space="preserve">An unexpected error occurred while reading an ini file. Ini files cannot have the same key or group multiple times.</system:String>
-    <system:String x:Key="MessageWindow.Errors.IniKeyDuplicateMod0" xml:space="preserve">Mod Name: {0}&#x0a;Mod Author: {1}&#x0a;</system:String>
-    <!--> this is assuming the ini file was a mod <!-->
-    <system:String x:Key="MessageWindow.Errors.IniKeyDuplicateMod1">This mod won't work. Please report this error to the mod's author so they can fix it.</system:String>
+    
+    <system:String x:Key="MessageWindow.Errors.IniKeyDuplicateTitle">Error al leer el archivo .ini</system:String>
+    <system:String x:Key="MessageWindow.Errors.IniKeyDuplicate" xml:space="preserve">Ocurrió un error inesperado cuando se estaba leyendo el archivo .ini. Los archivos .ini no pueden utilizar la misma key o grupo múltiples veces.</system:String>
+    <system:String x:Key="MessageWindow.Errors.IniKeyDuplicateMod0" xml:space="preserve">Nombre del Mod: {0}&#x0a;Autor del Mod: {1}&#x0a;</system:String>
+    <system:String x:Key="MessageWindow.Errors.IniKeyDuplicateMod1">Este mod no funcionará. Por favor, reporta este error al autor del mod para que lo arregle.</system:String>
+    
+    <system:String x:Key="MessageWindow.Errors.LanguageSwitch" xml:space="preserve">El Manager no pudo seleccionar el idioma {0}.&#x0a;Si el error persiste. Por favor, reporta este error en el servidor X-Hax.&#x0a;&#x0a;Código Avanzado del Error: {1}</system:String>
+    <system:String x:Key="MessageWindow.Errors.PermissionTitle">Acceso Denegado</system:String>
+    <system:String x:Key="MessageWindow.Errors.FolderPermission" xml:space="preserve">Error al crear directorio. El programa no tiene acceso de escritura en esta ruta: {0}&#x0a;&#x0a;Por favor, reinicia el Manager como Administrador .</system:String>
+    <system:String x:Key="MessageWindow.Errors.GameNoLongerFound" xml:space="preserve">Error al encontrar la ruta de juego de {0} en {1}&#x0a;Si has movido el directorio del juego, vuelve a seleccionar la ruta del juego en la pestaña de Configuración del Manager.</system:String>
     <!--#endregion-->
 	
 	<!--#region Warnings-->
@@ -126,9 +129,18 @@
     <system:String x:Key="MessageWindow.Warnings.ProfilesDeleted.Message1" xml:space="preserve">No se pudieron encontrar los siguientes perfiles:</system:String>
     <system:String x:Key="MessageWindow.Warnings.ProfilesDeleted.Message2" xml:space="preserve">Estos perfiles serán eliminados de la lista de Perfiles y el perfil seleccionado será el primer perfil de la lista.</system:String>
 
+    <system:String x:Key="MessageWindow.Warnings.FirstMigrationFail.Title" xml:space="preserve">Error durante la migración automática de perfiles</system:String>
+    <system:String x:Key="MessageWindow.Warnings.FirstMigrationFail.Message1" xml:space="preserve">El SA Mod Manager no pudo convertir el último perfil que usaste.</system:String>
+    <system:String x:Key="MessageWindow.Warnings.FirstMigrationFail.Message2" xml:space="preserve">Se va a crear un nuevo perfil por defecto. Puedes volver a intentar la conversión en la Gestión de Perfiles.</system:String>
+
     <system:String x:Key="MessageWindow.Warnings.ProfileMigration.Title" xml:space="preserve">No se pudo Importar</system:String>
     <system:String x:Key="MessageWindow.Warnings.ProfileMigration.Message1" xml:space="preserve">No se pudieron importar los siguientes archivos como perfiles:</system:String>
     <system:String x:Key="MessageWindow.Warnings.ProfileMigration.Message2" xml:space="preserve">&#x0a;&#x0a;Por favor, asegúrate de que estás usando un archivo .JSON de Perfil de Juego o un archivo .INI del antiguo Mod Loader.</system:String>
+
+    <system:String x:Key="MessageWindow.Warnings.Net8Missing" xml:space="preserve">La nueva actualización del Mod Manager necesita al menos la versión 8.0.7 de .NET Desktop para funcionar correctamente.&#x0a;&#x0a;¿Quieres instalarla ahora?</system:String>
+    
+    <system:String x:Key="MessageWindow.Warnings.ChannelReleaseSwap" xml:space="preserve">You are about to switch to the current release version of the Manager.&#x0a;Do you want to continue? The Manager will restart to switch channels.</system:String>
+    <system:String x:Key="MessageWindow.Warnings.ChannelDevSwap" xml:space="preserve">You are about to switch to the development build of the Manager. This version may contain untested features and bugs.&#x0a;Do you want to continue? The Manager will restart to switch channels.</system:String>
     <!--#endregion-->
 
     <!--#region Information-->
@@ -158,13 +170,10 @@
     <system:String x:Key="MessageWindow.Information.Exception.Message">¿Quieres copiar en tu portapapeles una copia de tu configuración del Manager y Perfil para mandarlas junto a tu reporte de error?&#x0a;&#x0a;Esto no es necesario, pero podría ayudar a resolver tu problema.</system:String>
 
     <system:String x:Key="MessageWindow.Information.BugReport.Title">Reportar Error</system:String>
-    <system:String x:Key="MessageWindow.Information.BugReport.Message1">Estás a punto de reportar un error. Por favor, asegúrate de que:</system:String>
-    <system:String x:Key="MessageWindow.Information.BugReport.Message2">Tu Manager está actualizado.</system:String>
-    <system:String x:Key="MessageWindow.Information.BugReport.Message3">Tu Mod Loader está actualizado.</system:String>
-    <system:String x:Key="MessageWindow.Information.BugReport.Message4">Todos tus Mods están actualizado.</system:String>
-    <system:String x:Key="MessageWindow.Information.BugReport.Message5">Si has verificado correctamente todo lo de arriba; Por favor, sigue las instrucciones de abajo para mandar tu reporte de error al repositorio correcto:</system:String>
-    <system:String x:Key="MessageWindow.Information.BugReport.Message6">Para cualquier problema con el programa que estás actualmente usando; Por favor, utiliza el botón del Mod Manager.</system:String>
-    <system:String x:Key="MessageWindow.Information.BugReport.Message7">Para cualquier problema con el juego (tales como bloqueos); Por favor, utiliza el botón del Mod Loader.</system:String>
+    <system:String x:Key="MessageWindow.Information.BugReport.Message1" xml:space="preserve">You are about to submit a bug report for the Mod Manager.&#x0a;&#x0a;This is NOT for troubleshooting issues with the games or mods.</system:String>
+    <system:String x:Key="MessageWindow.Information.BugReport.Message2" xml:space="preserve">&#x0a;Please ensure the following:&#x0a;- Your Manager is up to date.&#x0a;- You can provide screenshots or videos.</system:String>
+    <system:String x:Key="MessageWindow.Information.BugReport.Message3" xml:space="preserve">&#x0a;Are you sure you want to continue?</system:String>
+    <!--#endregion-->
     <!--#endregion-->
 
 </ResourceDictionary>

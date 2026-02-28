@@ -61,22 +61,11 @@ namespace SAModManager.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
+        ///   Looks up a localized string similar to .
         /// </summary>
-        internal static byte[] bass {
+        internal static string Dev {
             get {
-                object obj = ResourceManager.GetObject("bass", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] d3d8m {
-            get {
-                object obj = ResourceManager.GetObject("d3d8m", resourceCulture);
-                return ((byte[])(obj));
+                return ResourceManager.GetString("Dev", resourceCulture);
             }
         }
         
@@ -146,6 +135,16 @@ namespace SAModManager.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
+        internal static byte[] SA2Keyboard {
+            get {
+                object obj = ResourceManager.GetObject("SA2Keyboard", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
         internal static byte[] SA2ModLoader {
             get {
                 object obj = ResourceManager.GetObject("SA2ModLoader", resourceCulture);
@@ -174,71 +173,7 @@ namespace SAModManager.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] SDL2 {
-            get {
-                object obj = ResourceManager.GetObject("SDL2", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to https://github.com/X-Hax/SA-Mod-Manager/raw/master/SA-Mod-Manager/Resources/bass.zip.
-        /// </summary>
-        internal static string URL_BASS {
-            get {
-                return ResourceManager.GetString("URL_BASS", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to https://github.com/X-Hax/SA-Mod-Manager/raw/master/SA-Mod-Manager/Resources/d3d8m.dll.
-        /// </summary>
-        internal static string URL_D3D8M {
-            get {
-                return ResourceManager.GetString("URL_D3D8M", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to https://raw.githubusercontent.com/X-Hax/sa2-mod-loader/master/data/Border_Default.png.
-        /// </summary>
-        internal static string URL_SA2_BORDER {
-            get {
-                return ResourceManager.GetString("URL_SA2_BORDER", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to https://raw.githubusercontent.com/X-Hax/sa2-mod-loader/master/data/Codes.lst.
-        /// </summary>
-        internal static string URL_SA2_CODE {
-            get {
-                return ResourceManager.GetString("URL_SA2_CODE", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to https://github.com/X-Hax/sa2-mod-loader/raw/a7bba5ab10314eb44816f027e1368125c7f0e4df/data/DebugFontTexture.dds.
-        /// </summary>
-        internal static string URL_SA2_DEBUGFONT_TEX {
-            get {
-                return ResourceManager.GetString("URL_SA2_DEBUGFONT_TEX", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to https://github.com/X-Hax/sa2-mod-loader/raw/a7bba5ab10314eb44816f027e1368125c7f0e4df/data/DebugTextShader.hlsl.
-        /// </summary>
-        internal static string URL_SA2_DEBUGTEXT_SHADER {
-            get {
-                return ResourceManager.GetString("URL_SA2_DEBUGTEXT_SHADER", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to https://github.com/X-Hax/sa2-mod-loader/raw/master/extlib/SA2ModLoader.dll.
+        ///   Looks up a localized string similar to https://api.github.com/repos/x-hax/sa2-mod-loader/releases/latest.
         /// </summary>
         internal static string URL_SA2_DL {
             get {
@@ -247,47 +182,11 @@ namespace SAModManager.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to https://raw.githubusercontent.com/X-Hax/sa2-mod-loader/master/data/Patches.json.
-        /// </summary>
-        internal static string URL_SA2_PATCH {
-            get {
-                return ResourceManager.GetString("URL_SA2_PATCH", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to https://raw.githubusercontent.com/X-Hax/sadx-mod-loader/e3a476800b05f163a1c4bd60257552c81313e15e/data/Border_Default.png.
-        /// </summary>
-        internal static string URL_SADX_BORDER {
-            get {
-                return ResourceManager.GetString("URL_SADX_BORDER", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to https://raw.githubusercontent.com/X-Hax/sadx-mod-loader/master/data/Codes.lst.
-        /// </summary>
-        internal static string URL_SADX_CODE {
-            get {
-                return ResourceManager.GetString("URL_SADX_CODE", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to https://github.com/X-Hax/sadx-mod-loader/raw/master/extlib/ModLoaders/SADXModLoader.dll.
+        ///   Looks up a localized string similar to https://api.github.com/repos/x-hax/sadx-mod-loader/releases/latest.
         /// </summary>
         internal static string URL_SADX_DL {
             get {
                 return ResourceManager.GetString("URL_SADX_DL", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to https://raw.githubusercontent.com/X-Hax/sadx-mod-loader/master/data/Patches.json.
-        /// </summary>
-        internal static string URL_SADX_PATCH {
-            get {
-                return ResourceManager.GetString("URL_SADX_PATCH", resourceCulture);
             }
         }
         
@@ -297,15 +196,6 @@ namespace SAModManager.Properties {
         internal static string URL_SAMM_UPDATE {
             get {
                 return ResourceManager.GetString("URL_SAMM_UPDATE", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to https://github.com/X-Hax/SA-Mod-Manager/raw/master/SA-Mod-Manager/Resources/SDL2.dll.
-        /// </summary>
-        internal static string URL_SDL {
-            get {
-                return ResourceManager.GetString("URL_SDL", resourceCulture);
             }
         }
         

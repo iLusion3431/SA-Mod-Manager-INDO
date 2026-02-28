@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using SAModManager.UI;
+using SAModManager.Management;
 
 namespace SAModManager.Profile
 {
@@ -171,13 +172,13 @@ namespace SAModManager.Profile
             {
                 foreach (ProfileEntry profile in selection)
                 {
-                    string fullPath = Path.Combine(App.CurrentGame.ProfilesDirectory, profile.Filename);
+                    string fullPath = Path.Combine(ProfileManager.GetProfilesDirectory(), profile.Filename);
 
-                    string clonedName = CopyFileWithAutoRename(Path.Combine(App.CurrentGame.ProfilesDirectory, profile.Filename));
+                    string clonedName = CopyFileWithAutoRename(Path.Combine(ProfileManager.GetProfilesDirectory(), profile.Filename));
                     ProfileEntry clonedProfile = new(clonedName, clonedName + ".json");
 
                     if (File.Exists(fullPath))
-                        File.Copy(fullPath, Path.Combine(App.CurrentGame.ProfilesDirectory, clonedProfile.Filename), true);
+                        File.Copy(fullPath, Path.Combine(ProfileManager.GetProfilesDirectory(), clonedProfile.Filename), true);
 
 					App.Profiles.ProfilesList.Add(clonedProfile);
                 }
@@ -229,7 +230,7 @@ namespace SAModManager.Profile
         {
             var dialog = new System.Windows.Forms.OpenFileDialog
             {
-                Filter = "Old Profiles|*.ini|Profiles|*.json",
+                Filter = "Profiles|*.ini;*.json",
                 Multiselect = true
             };
 
@@ -243,6 +244,11 @@ namespace SAModManager.Profile
                 int i = 0;
                 foreach (string filename in dialog.FileNames)
                 {
+                    if (dialog.SafeFileNames[i].Equals("Profiles.json", StringComparison.CurrentCultureIgnoreCase))
+                    {
+                        continue;
+                    }
+
 					string file = Path.GetFullPath(filename);
                     if (File.Exists(file))
                     {
@@ -250,7 +256,7 @@ namespace SAModManager.Profile
                         Configuration.SADX.GameSettings settings = new();
                         Configuration.SA2.GameSettings settingsSA2 = new();
                         string newFileName = Path.GetFileNameWithoutExtension(file);
-                        string newFilePath = Path.Combine(App.CurrentGame.ProfilesDirectory, newFileName + ".json");
+                        string newFilePath = Path.Combine(ProfileManager.GetProfilesDirectory(), newFileName + ".json");
 
                         switch (Path.GetExtension(file))
                         {
@@ -259,7 +265,7 @@ namespace SAModManager.Profile
                                 {
                                     switch (App.CurrentGame.id)
                                     {
-                                        case SetGame.SADX:
+                                        case GameEntry.GameType.SADX:
                                             settings = Configuration.SADX.GameSettings.Deserialize(file);
                                             if (settings.Graphics == null)
                                             {
@@ -267,7 +273,7 @@ namespace SAModManager.Profile
                                                 throw new Exception();
                                             }
                                             break;
-                                        case SetGame.SA2:
+                                        case GameEntry.GameType.SA2:
                                             settingsSA2 = Configuration.SA2.GameSettings.Deserialize(file);
                                             if (settingsSA2.Graphics == null)
                                             {
@@ -276,7 +282,8 @@ namespace SAModManager.Profile
                                             }
                                             break;
                                     }
-                                    if (!invalid)
+
+                                    if (!invalid && file.Equals(newFilePath, StringComparison.CurrentCultureIgnoreCase) == false)
                                         File.Copy(file, newFilePath, true);
                                 }
                                 catch
@@ -298,7 +305,7 @@ namespace SAModManager.Profile
                                 if (entry.Name == newFileName)
                                 {
                                     newFileName = newFileName + " (" + i.ToString() + ")";
-                                    newFilePath = Path.Combine(App.CurrentGame.ProfilesDirectory, newFileName + ".json");
+                                    newFilePath = Path.Combine(ProfileManager.GetProfilesDirectory(), newFileName + ".json");
                                 }
                             }
 

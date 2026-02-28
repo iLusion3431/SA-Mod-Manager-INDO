@@ -26,6 +26,7 @@
         <ResourceDictionary Source="Updater/en-EN.xaml"/>
         <ResourceDictionary Source="MainWindow/UpdateStatus/en-EN.xaml"/>
 		<ResourceDictionary Source="ExceptionHandler/en-EN.xaml"/>
+		<ResourceDictionary Source="AdvancedSettingsWindow/en-EN.xaml"/>
 	</ResourceDictionary.MergedDictionaries>
     
     <!--Region Common UI-->
@@ -57,7 +58,7 @@
     <system:String x:Key="CommonStrings.Success">Success!</system:String>
     <system:String x:Key="CommonStrings.Failed">Failed</system:String>
 	<system:String x:Key="CommonStrings.ID">ID</system:String>
-	<system:String x:Key="CommonString.Dependency">Dependency</system:String>
+	<system:String x:Key="CommonStrings.Dependency">Dependency</system:String>
 
     <!--Region Create Code-->
     <system:String x:Key="CommonStrings.Type">Type</system:String>

@@ -37,6 +37,10 @@
     <system:String x:Key="Manager.Tabs.Codes.MadeBy">Créer par</system:String>
     <!--#endregion-->
 
+    <!--Game-->
+    <system:String x:Key="Manager.Buttons.AddGame">Ajouter un Jeu...</system:String>
+    <!--#endregion-->
+
     <!--Mod About Window-->
     <system:String x:Key="AuthorSite">Site de l'Auteur</system:String>
     <system:String x:Key="ModSourceCode">Code Source du Mod</system:String>
@@ -58,6 +62,7 @@
     <system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options">Options du jeu</system:String>
     <system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Theme">Thèmes:</system:String>
     <system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Lang">Langue:</system:String>
+    <system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.UpdateChannel">Canal de Mise à Jour:</system:String>
     <system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Profile">Profil:</system:String>
     <system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.GameDirectory">Répertoire du Jeu:</system:String>
 
@@ -84,6 +89,7 @@
     <system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Group.Updates.Group.Advanced.Check.LogDebug">Logger les infos de Debug dans un fichier</system:String>
     <system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Group.Updates.Group.Advanced.Check.CrashDumps">Créer des Crash Dumps</system:String>
     <system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Group.Updates.Group.Advanced.Check.HealthCheck">Bilan de santé du jeu</system:String>
+    <system:String x:Key="Manager.Tabs.ManagerConfig.Group.Options.Group.Updates.Group.Advanced.Check.KeepModOrder">Maintenir l'ordre des mods</system:String>
     <!--#endregion-->
 
     <!--About-->
@@ -149,7 +155,7 @@
     <system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.TextureFiltering">Sets the texture filter type for all model textures.</system:String>
     <system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.UIFiltering">Sets the texture filtering type for all GUI related textures.</system:String>
     <system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.DetailLevel">Définit le niveau de détail avec la distance d'affichage.</system:String>
-    <system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.BackgroundFill">Définit la méthode de remplissage de l'image des bordures lorsque vous jouer avec l'option écran large avec un rapport hauteur/largeur 4:3 verrouillé.</system:String>
+    <system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.BackgroundFill" xml:space="preserve">Sets the scaling mode for backgrounds&#x0a;Stretch: The backgrounds will be stretched without maintaining the aspect ratio.&#x0a;Fit: The backgrounds will be displayed with borders.&#x0a;Fill: The backgrounds will be cropped and zoomed in to display without borders.</system:String>
     <system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.FMVFill">Définit la méthode de remplissage lorsque le jeu lance un FMV.</system:String>
     <system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.Mipmap">Génération de MipMaps pour toutes les textures qui n'en ont pas.</system:String>
     <system:String x:Key="MainWindow.Tips.Tab.GameConfig.Tab.Graphics.EnableD3D8to9">Permet l'utilisation de D3D8to9 Shim, permettant au jeu d'utiliser les fonctionnalités de D3D9. Requis pour certains mods.</system:String>
@@ -228,6 +234,7 @@
     <system:String x:Key="MainWindow.Tips.Tab.Options.SADocs">Ouvre un lien vers le site Web SA Docs qui contient diverses informations concernant la modification des jeux Sonic Adventure.</system:String>
     <system:String x:Key="MainWindow.Tips.Tab.Options.ReportBug">Ouvre un lien vers le dépôt GitHub du Mod Manager pour signaler des bugs.</system:String>
     <system:String x:Key="MainWindow.Tips.Tab.Options.HealthCheck">Lance un contrôle de santé sur l'installation de votre jeu pour voir si vous avez des fichiers manquants ou modifiés.</system:String>
+    <system:String x:Key="MainWindow.Tips.Tab.Options.KeepModOrder">Les mods activées ne seront plus déplacés en haut de la liste lors de la sauvegarde du Manager.</system:String>
     <!--#endregion-->
 
 </ResourceDictionary>

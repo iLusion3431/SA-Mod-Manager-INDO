@@ -5,6 +5,9 @@ using System.IO;
 using System.Text.Json;
 using SAModManager.UI;
 using System.Text.Json.Serialization;
+using System.ComponentModel.Design;
+using System;
+using SAModManager.Management;
 
 // TODO: Build SA2 Game Settings
 namespace SAModManager.Configuration.SA2
@@ -79,14 +82,14 @@ namespace SAModManager.Configuration.SA2
         /// <summary>
         /// Sets the Screen Mode (Windowed, Fullscreen, Borderless, or Custom Window)
         /// </summary>
-        [DefaultValue(DisplayMode.Borderless)]
-        public int ScreenMode { get; set; } = (int)DisplayMode.Borderless;
+        [DefaultValue(DisplayMode.Windowed)]
+        public int ScreenMode { get; set; } = (int)DisplayMode.Windowed;
 
-		/// <summary>
-		/// Stretches the inner window (game render) to the outer window's size.
-		/// </summary>
-		[DefaultValue(false)]
-		public bool StretchToWindow { get; set; } = false;
+        /// <summary>
+        /// Stretches the inner window (game render) to the outer window's size.
+        /// </summary>
+        [DefaultValue(false)]
+        public bool StretchToWindow { get; set; } = false;
 
         /// <summary>
         /// Placed here to provide parity with the launcher as it also allows a language selection. 
@@ -107,11 +110,11 @@ namespace SAModManager.Configuration.SA2
         [DefaultValue(60)]
         public int RefreshRate { get; set; } = 60;
 
-		/// <summary>
-		/// Disables the Border Image from being loaded and rendered.
-		/// </summary>
-		[DefaultValue(false)]
-		public bool DisableBorderImage { get; set; } = false;
+        /// <summary>
+        /// Disables the Border Image from being loaded and rendered.
+        /// </summary>
+        [DefaultValue(false)]
+        public bool DisableBorderImage { get; set; } = false;
 
         /// <summary>
         /// Converts from the original settings file.
@@ -276,6 +279,12 @@ namespace SAModManager.Configuration.SA2
         public bool UseManual { get; set; } = false;
 
         /// <summary>
+        /// Enables the Manual settings for Events/Cutscenes.
+        /// </summary>
+        [DefaultValue(false)]
+        public bool UseEventManual { get; set; } = false;
+
+        /// <summary>
         /// Enables manually modifying the start position when using test spawn.
         /// </summary>
         [DefaultValue(false)]
@@ -328,6 +337,7 @@ namespace SAModManager.Configuration.SA2
         }
     }
 
+	[Obsolete]
     public class GamePatches
     {
         [DefaultValue(true)]
@@ -350,43 +360,44 @@ namespace SAModManager.Configuration.SA2
 
     public class GameSettings
     {
-		/// <summary>
-		/// Versioning.
-		/// </summary>
-		public enum SA2SettingsVersions
-		{
-			v0,     // Version 0: Original LoaderInfo Version
-			v1,     // Version 1: Launch Version, functional parity with SA2GameSettings.
-			v2,     // Version 2: Removed KeepAspectOnResize option, added StretchToWindow and DisableBorderImage
+        /// <summary>
+        /// Versioning.
+        /// </summary>
+        public enum SA2SettingsVersions
+        {
+            v0,     // Version 0: Original LoaderInfo Version
+            v1,     // Version 1: Launch Version, functional parity with SA2GameSettings.
+            v2,     // Version 2: Removed KeepAspectOnResize option, added StretchToWindow and DisableBorderImage
+			v3,		// Version 3: Removed old Patch system entirely, moving to new modular system.
 
-			MAX,    // Do Not Modify, new versions are placed above this.
-		}
+            MAX,    // Do Not Modify, new versions are placed above this.
+        }
 
-		/// <summary>
-		/// Versioning for the SA2 Settings file.
-		/// </summary>
-		[DefaultValue((int)(SA2SettingsVersions.MAX - 1))]
-		public int SettingsVersion { get; set; } = (int)(SA2SettingsVersions.MAX - 1);
+        /// <summary>
+        /// Versioning for the SA2 Settings file.
+        /// </summary>
+        [DefaultValue((int)(SA2SettingsVersions.MAX - 1))]
+        public int SettingsVersion { get; set; } = (int)(SA2SettingsVersions.MAX - 1);
 
-		/// <summary>
-		/// Graphics Settings for SA2.
-		/// </summary>
-		public GraphicsSettings Graphics { get; set; } = new();
+        /// <summary>
+        /// Graphics Settings for SA2.
+        /// </summary>
+        public GraphicsSettings Graphics { get; set; } = new();
 
         /// <summary>
         /// TestSpawn Settings for SA2.
         /// </summary>
         public TestSpawnSettings TestSpawn { get; set; } = new();
 
-        /// <summary>
-        /// Patches for SA2.
-        /// </summary>
-        public GamePatches Patches { get; set; } = new();
+		/// <summary>
+		/// Game Patch List for SA2.
+		/// </summary>
+		public Dictionary<string, bool> Patches { get; set; } = new Dictionary<string, bool>();
 
-        /// <summary>
-        /// Debug Settings.
-        /// </summary>
-        public DebugSettings DebugSettings { get; set; } = new();
+		/// <summary>
+		/// Debug Settings.
+		/// </summary>
+		public DebugSettings DebugSettings { get; set; } = new();
 
         /// <summary>
         /// Path to the game install saved with this configuration.
@@ -406,6 +417,8 @@ namespace SAModManager.Configuration.SA2
         [IniName("Code")]
         [IniCollection(IniCollectionMode.NoSquareBrackets, StartIndex = 1)]
         public List<string> EnabledCodes { get; set; }      // SA2LoaderInfo.EnabledCodes
+
+        public List<string> ModsList { get; set; } = new();   // used for consistent mod order option
 
         /// <summary>
         /// Converts from original settings file.
@@ -435,6 +448,17 @@ namespace SAModManager.Configuration.SA2
 
             if (Directory.Exists(GamePath))
             {
+                string configfolder = Path.Combine(GamePath, "Config");
+                Util.CreateSafeDirectory(configfolder);
+
+                string keyboardPath = Path.GetFullPath(Path.Combine(GamePath, App.CurrentGame.GameConfigFile[0]));
+
+                //if keyboard config is missing add it (fix game crashes if official launcher was never used)
+                if (File.Exists(keyboardPath) == false)
+                {
+                    App.ExtractResource("SA2Keyboard.cfg", keyboardPath);
+                }
+
                 string configPath = Path.Combine(GamePath, App.CurrentGame.GameConfigFile[1]);
                 config.Serialize(configPath);
             }
@@ -446,69 +470,72 @@ namespace SAModManager.Configuration.SA2
             }
         }
 
-		/// <summary>
-		/// Deserializes an SA2 GameSettings JSON File and returns a populated class.
-		/// </summary>
-		/// <param name="path"></param>
-		/// <returns></returns>
-		public static GameSettings Deserialize(string path)
-		{
-			try
-			{
-				if (File.Exists(path))
-				{
-					string jsonContent = File.ReadAllText(path);
-
-					GameSettings settings = JsonSerializer.Deserialize<GameSettings>(jsonContent);
-
-					// This is where the settings versions get bumped on load.
-					// Set in a switch case in the event we need to make changes on a specific version.
-					switch (settings.SettingsVersion)
-					{
-						default:
-							if (settings.SettingsVersion < (int)(SA2SettingsVersions.MAX - 1))
-								settings.SettingsVersion = (int)(SA2SettingsVersions.MAX - 1);
-							break;
-					}
-
-					return settings;
-				}
-				else
-					return new();
-			}
-			catch
-			{
-				return new();
-			}
-		}
-
-		/// <summary>
-		/// Serializes an SA2 GameSettings JSON File.
-		/// </summary>
-		/// <param name="path"></param>
-		public void Serialize(string profileName)
+        /// <summary>
+        /// Deserializes an SA2 GameSettings JSON File and returns a populated class.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        public static GameSettings Deserialize(string path)
         {
-			if (!profileName.Contains(".json"))
-				profileName += ".json";
-
-			// TODO: Fix this function.
-			string path = Path.Combine(App.CurrentGame.ProfilesDirectory, profileName);
-			try
+            try
             {
-                if (Directory.Exists(App.CurrentGame.ProfilesDirectory))
+                if (File.Exists(path))
                 {
-                    string jsonContent = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-                    File.WriteAllText(path, jsonContent);
+                    string jsonContent = File.ReadAllText(path);
+
+                    GameSettings settings = JsonSerializer.Deserialize<GameSettings>(jsonContent);
+
+                    // This is where the settings versions get bumped on load.
+                    // Set in a switch case in the event we need to make changes on a specific version.
+                    switch (settings.SettingsVersion)
+                    {
+                        default:
+                            if (settings.SettingsVersion < (int)(SA2SettingsVersions.MAX - 1))
+                                settings.SettingsVersion = (int)(SA2SettingsVersions.MAX - 1);
+                            break;
+                    }
+
+                    return settings;
                 }
                 else
+                    return new();
+            }
+            catch
+            {
+                return new();
+            }
+        }
+
+        /// <summary>
+        /// Serializes an SA2 GameSettings JSON File.
+        /// </summary>
+        /// <param name="path"></param>
+        public void Serialize(string profileName)
+        {
+            if (!profileName.Contains(".json"))
+                profileName += ".json";
+
+            // TODO: Fix this function.
+            string path = Path.Combine(ProfileManager.GetProfilesDirectory(), profileName);
+            try
+            {
+                if (Directory.Exists(ProfileManager.GetProfilesDirectory()))
                 {
-                    App.CurrentGame.ProfilesDirectory = Path.Combine(App.ConfigFolder, App.CurrentGame.gameAbbreviation);
-                    Directory.CreateDirectory(App.CurrentGame.ProfilesDirectory);
-                    if (Directory.Exists(App.CurrentGame.ProfilesDirectory))
+                    if (profileName == "Default" || profileName == "Default.json")
                     {
-                        string jsonContent = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-                        File.WriteAllText(path, jsonContent);
+                        if (!Path.Exists(path))
+                        {
+                            System.Drawing.Rectangle rect = GraphicsManager.GetDisplayBounds(1);
+                            if (rect.Height > 0)
+                            {
+                                Graphics.VerticalResolution = rect.Height;
+                                Graphics.HorizontalResolution = rect.Width;
+                                Graphics.ScreenMode = (int)GraphicsSettings.DisplayMode.Borderless;
+                            }
+                        }
                     }
+                    string jsonContent = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
+                    File.WriteAllText(path, jsonContent);
                 }
             }
             catch

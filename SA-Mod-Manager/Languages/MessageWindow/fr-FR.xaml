@@ -13,10 +13,7 @@
     <system:String x:Key="MessageWindow.Errors.ModWithoutFolder2" xml:space="preserve">&#x0a;&#x0a;Déplacez ou supprimer le mod.ini dans le dossier mods puis lancer le Mod Manager à nouveau.</system:String>
 
     <system:String x:Key="MessageWindow.Errors.GamePathFailed.Title">Echec Chemin d'accès</system:String>
-    <system:String x:Key="MessageWindow.Errors.GamePathFailed">Impossible de trouver un jeu supporté, assurez-vous de selectionner un dossier qui contient un jeu.</system:String>
-
-    <system:String x:Key="MessageWindow.Errors.GamePathNotFound.Title">Echec détection du chemin d'accès</system:String>
-    <system:String x:Key="MessageWindow.Errors.GamePathNotFound">Impossible de trouver le chemin d'accès du répertoire du jeu. Veuillez sélectionner le chemin dans les paramètres et assurez vous de prendre le dossier qui contient sonic.exe.</system:String>
+    <system:String x:Key="MessageWindow.Errors.GamePathFailed">Impossible de trouver un jeu supporté, assurez-vous de selectionner un dossier qui contient un jeu. Si vous avez renommé le fichier .exe d'origine, la détection du jeu ne fonctionnera pas.</system:String>
 
     <system:String x:Key="MessageWindow.Errors.ModAlreadyExists" xml:space="preserve">Un mod avec ce nom existe déjà.&#x0a;Veuillez choisir un nom différent ou renommer le mod existant.</system:String>
     <system:String x:Key="MessageWindow.Errors.ModAlreadyExists.Title">"Mod existe déjà"</system:String>
@@ -31,6 +28,8 @@
     <system:String x:Key="MessageWindow.Errors.InvalidFramerate">Paramètre de fréquence d'images non valide.</system:String>
     <system:String x:Key="MessageWindow.Errors.CodesListFailed">Erreur lors du chargement de la liste de codes</system:String>
     <system:String x:Key="MessageWindow.Errors.CodesListFailed.Title">Erreur lors du chargement du code</system:String>
+    <system:String x:Key="MessageWindow.Errors.CodeBuildFail" xml:space="preserve">Échec de la création de {0}, cela pourrait être un problème d'autorisation.&#x0a;&#x0a;Erreur avancée :&#x0a;{1}</system:String>
+    
     <system:String x:Key="MessageWindow.Errors.ModDelete" xml:space="preserve">Échec de la suppression du mod {0}.&#x0a;Veuillez vous assurer que les fichiers existent et ne sont pas utilisés par un autre programme, puis réessayez.</system:String>
     <system:String x:Key="MessageWindow.Errors.CheckUpdateError" xml:space="preserve">Les erreurs suivantes se sont produites lors de la recherche de mises à jour :&#x0a;&#x0a;</system:String>
     <system:String x:Key="MessageWindow.Errors.CheckUpdateError.Title">Erreurs de mise à jour</system:String>
@@ -43,6 +42,11 @@
     <system:String x:Key="MessageWindow.Errors.IniKeyDuplicateMod0" xml:space="preserve">Mod Name: {0}&#x0a;Mod Author: {1}&#x0a;</system:String>
     <!--> this is assuming the ini file was a mod <!-->
     <system:String x:Key="MessageWindow.Errors.IniKeyDuplicateMod1">This mod won't work. Please report this error to the mod's author so they can fix it.</system:String>
+    <system:String x:Key="MessageWindow.Errors.LanguageSwitch" xml:space="preserve">Le Mod Manager n'a pas pu sélectionner la langue {0}.&#x0a;Si le problème persiste, veuillez le signaler sur le serveur X-Hax.&#x0a;&#x0a;Code d'erreur avancé : {1}</system:String>
+
+    <system:String x:Key="MessageWindow.Errors.PermissionTitle">Accès Refusé</system:String>
+    <system:String x:Key="MessageWindow.Errors.FolderPermission" xml:space="preserve">Échec de la création du dossier, le programme n'a pas l'autorisation d'écrire sur ce chemin : {0}&#x0a;&#x0a;Veuillez redémarrer le Mod Manager avec les privilèges d'administrateur.</system:String>
+    <system:String x:Key="MessageWindow.Errors.GameNoLongerFound" xml:space="preserve">Failed to find the game path of {0} at {1}&#x0a;If you have moved your game directory to a different location, please re set the game path in the Manager Config tab.</system:String>
     <!--#endregion-->
     
     <!--#region Warnings-->
@@ -53,7 +57,10 @@
     <system:String x:Key="MessageWindow.Warnings.HealthCheckTitle">Bilan de Santé</system:String>
     <system:String x:Key="MessageWindow.Warnings.HealthCheck" xml:space="preserve">Vous êtes sur le point d'exécuter le bilan de santé du jeu. Cette action vérifiera tous les fichiers du jeu, à l'exception des fichiers audio.&#x0a;&#x0a;Souhaitez-vous continuer?</system:String>
     <system:String x:Key="MessageWindow.Warnings.GenerateManifest" xml:space="preserve">Cette action peut causer la perte des DONNÉES UTILISATEUR DU MOD (FICHIERS DE SAUVEGARDE ET CONFIG) lors de la prochaine mise à jour ! Pour éviter cela, vous ne devez jamais exécuter cette action sur des mods que vous n'avez pas développés.&#x0a;&#x0a;Êtes-vous sûr de vouloir continuer ?</system:String>
+    <system:String x:Key="MessageWindow.Warnings.Net8Missing" xml:space="preserve">La nouvelle mise à jour de Mod Manager nécessite au moins .NET 8.0.7 Desktop Runtime pour fonctionner.&#x0a;&#x0a;Souhaitez-vous l'installer maintenant ?</system:String>
 
+    <system:String x:Key="MessageWindow.Warnings.ChannelReleaseSwap" xml:space="preserve">Vous êtes sur le point de passer à la version actuelle du Manager. Voulez-vous continuer ? Le Manager va redémarrer pour changer de canal.</system:String>
+    <system:String x:Key="MessageWindow.Warnings.ChannelDevSwap" xml:space="preserve">Vous êtes sur le point de passer à la version de développement du Manager. Cette version peut contenir des fonctionnalités non testés ainsi que des bugs. Voulez-vous vraiment continuer ? Le Manager va redémarrer pour changer de canal.</system:String>
     <!--#endregion-->
 
     <!--#region Information-->
@@ -76,12 +83,9 @@
     <system:String x:Key="MessageWindow.Information.Exception.Message">Souhaitez-vous copier vos paramètres et profil du Mod Manager dans votre presse-papiers pour les inclure dans votre rapport ?&#x0a;&#x0a;Ce n'est pas nécessaire, mais cela peut aider à résoudre des problèmes.</system:String>
 
     <system:String x:Key="MessageWindow.Information.BugReport.Title">Rapportez une erreur</system:String>
-    <system:String x:Key="MessageWindow.Information.BugReport.Message1">Vous êtes sur le point de soumettre un rapport de bug, veuillez vous assurer que:</system:String>
-    <system:String x:Key="MessageWindow.Information.BugReport.Message2">Votre Manager est à jour.</system:String>
-    <system:String x:Key="MessageWindow.Information.BugReport.Message3">Votre Mod Loader est à jour.</system:String>
-    <system:String x:Key="MessageWindow.Information.BugReport.Message4">Tous les mods sont à jour.</system:String>
-    <system:String x:Key="MessageWindow.Information.BugReport.Message5">Si vous avez vérifié ce qui précède, veuillez suivre les instructions ci-dessous :</system:String>
-    <system:String x:Key="MessageWindow.Information.BugReport.Message6">En cas de problème avec le programme que vous utilisez actuellement, veuillez utiliser le bouton 'Mod Manager'.</system:String>
-    <system:String x:Key="MessageWindow.Information.BugReport.Message7">En cas de problème avec le jeu, tel que des blocages, des plantages, etc... utiliser le bouton 'Mod Loader'.</system:String>
+    <system:String x:Key="MessageWindow.Information.BugReport.Message1" xml:space="preserve">You are about to submit a bug report for the Mod Manager.&#x0a;&#x0a;This is NOT for troubleshooting issues with the games or mods.</system:String>
+    <system:String x:Key="MessageWindow.Information.BugReport.Message2" xml:space="preserve">&#x0a;Please ensure the following:&#x0a;- Your Manager is up to date.&#x0a;- You can provide screenshots or videos.</system:String>
+    <system:String x:Key="MessageWindow.Information.BugReport.Message3" xml:space="preserve">&#x0a;Are you sure you want to continue?</system:String>
+    <!--#endregion-->
     <!--#endregion-->
 </ResourceDictionary>

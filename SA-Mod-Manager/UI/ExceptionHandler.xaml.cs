@@ -1,4 +1,5 @@
-﻿using SAModManager.Profile;
+﻿using SAModManager.Management;
+using SAModManager.Profile;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -57,8 +58,8 @@ namespace SAModManager.UI
             error.AppendLine($"\tManager Location: {App.StartDirectory}");
             error.AppendLine($"\tRunning as Admin: {Util.RunningAsAdmin().ToString()}");
 
-            if (File.Exists(App.CurrentGame.loader.loaderVersionpath))
-				 error.AppendLine($"\tMod Loader Version (Hash): {File.ReadAllText(App.CurrentGame.loader.loaderVersionpath)}");
+            if (File.Exists(App.CurrentGame?.loader?.mlverPath))
+				 error.AppendLine($"\tMod Loader Version (ID): {File.ReadAllText(App.CurrentGame.loader.mlverPath)}");
 			if (markdown) 
 				error.AppendLine("```");
 
@@ -124,10 +125,10 @@ namespace SAModManager.UI
 			else
 				info.AppendLine("No Manager Settings File exists.");
 
-			if (File.Exists(Path.Combine(App.CurrentGame.ProfilesDirectory, "Profiles.json")))
+			if (File.Exists(Path.Combine(ProfileManager.GetProfilesDirectory(), "Profiles.json")))
 			{
-				Profiles profiles = Profiles.Deserialize(Path.Combine(App.CurrentGame.ProfilesDirectory, "Profiles.json"));
-				string profile = Path.Combine(App.CurrentGame.ProfilesDirectory, profiles.GetProfileFilename());
+				Profiles profiles = Profiles.Deserialize(Path.Combine(ProfileManager.GetProfilesDirectory(), "Profiles.json"));
+				string profile = Path.Combine(ProfileManager.GetProfilesDirectory(), profiles.GetProfileFilename());
 				info.AppendLine("```");
 				info.AppendLine($"{File.ReadAllText(profile)}");
 				info.AppendLine("```");
@@ -166,9 +167,8 @@ namespace SAModManager.UI
 				Clipboard.SetText(SettingsReport());
 
 			string url = "https://github.com/X-Hax/SA-Mod-Manager/issues/new";
-			url += $"?title=[Error+Report]:";  // Add Title
-			url += $"&labels=exception+report"; // Add Label
-			url += $"&body={Uri.EscapeDataString(ExceptionReport(true, true))}"; // Add Body
+			url += $"?template=03-exception-report.yml";  // Add template
+			url += $"&ex-report={Uri.EscapeDataString(ExceptionReport(true, true))}"; // Add Body
 
             var ps = new ProcessStartInfo(url)
             {
@@ -182,7 +182,7 @@ namespace SAModManager.UI
 		{
 			try
 			{
-				Directory.CreateDirectory(App.crashFolder);
+				Util.CreateSafeDirectory(App.crashFolder);
                 DateTime currentDateTime = DateTime.Now;
 				string formattedDateTime = "log_" + currentDateTime.ToString("dd.MM.yyyy_HH.mm") + ".txt";
                 error.AppendLine();

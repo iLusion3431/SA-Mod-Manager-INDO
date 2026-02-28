@@ -3,160 +3,201 @@
 using SAModManager.Codes;
 using SAModManager.Configuration;
 using SAModManager.UI;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace SAModManager.ModsCommon
 {
-	public class ModDependency
-	{
-		public string ID { get; set; }
-		public string Folder { get; set; }
-		public string Name { get; set; }
-		public string Link { get; set; }
+    public class ModDependency
+    {
+        public string ID { get; set; }
+        public string Folder { get; set; }
+        public string Name { get; set; }
+        public string Link { get; set; }
 
-		public ModDependency(string depdency)
-		{
-			string[] strings = depdency.Split('|');
+        public ModDependency(string depdency)
+        {
+            string[] strings = depdency.Split('|');
 
-			ID = strings[0];
-			Folder = strings[1];
-			Name = strings[2];
-			Link = strings[3];
-		}
+            ID = strings[0];
+            Folder = strings[1];
+            Name = strings[2];
+            Link = strings[3];
+        }
 
-		public string GetDependencyName()
-		{
-			if (Name != "")
-				return Name;
-			else if (Folder != "")
-				return Folder;
-			else if (ID != "")
-				return ID;
-			else
-				return "[Mod Name Not Provided]";
-		}
+        public string GetDependencyName()
+        {
+            if (Name != "")
+                return Name;
+            else if (Folder != "")
+                return Folder;
+            else if (ID != "")
+                return ID;
+            else
+                return "[Mod Name Not Provided]";
+        }
 
-		public static Dictionary<string, string> GetModReferences(Dictionary<string, SAModInfo> mods)
-		{
-			Dictionary<string, string> activeMods = new Dictionary<string, string>();
+        private static List<SAModInfo> GetEnabledMods(List<string> modList, Dictionary<string, SAModInfo> allMods)
+        {
+            List<SAModInfo> outModList = new List<SAModInfo>();
 
-			foreach (string mod in mods.Keys)
-			{
-				SAModInfo modinfo = mods[mod];
-				string id = mod;
-				if (modinfo.ModID != null)
-					id = modinfo.ModID;
-				if (!activeMods.ContainsKey(id))
-					activeMods.Add(id, mod);
-				else
-				{
-					StringBuilder sb = new StringBuilder();
-					sb.AppendLine(Lang.GetString("ModDependency.Duplicate.DuplicatesFound1"));
-					sb.AppendLine($"{Lang.GetString("CommonStrings.Name")}: {modinfo.Name}, {Lang.GetString("CommonStrings.ID")}: {id}");
-					sb.AppendLine(Lang.GetString("ModDependency.Duplicate.DuplicatesFound2"));
-					
-					new MessageWindow(Lang.GetString("ModDependency.Duplicate.Header"), sb.ToString(), icon: MessageWindow.Icons.Error).ShowDialog();
-				}
-			}
+            foreach (var mod in modList)
+            {
+                if (allMods.ContainsKey(mod))
+                    outModList.Add(allMods[mod]);
+            }
 
-			return activeMods;
-		}
+            return outModList;
+        }
 
-		public static bool CheckDependencies(List<string> modlist, Dictionary<string, SAModInfo> allmods)
-		{
-			bool check = false;
-			Dictionary<string, string> cMods = GetModReferences(allmods);
+        private static List<SAModInfo> GetDisabledMods(List<string> modList, Dictionary<string, SAModInfo> allMods)
+        {
+            List<SAModInfo> outModList = new List<SAModInfo>();
 
-			foreach (string checkmod in modlist)
-			{
-				SAModInfo mod = allmods[checkmod];
-				if (mod.Dependencies.Count > 0)
-				{
-					int mID = modlist.IndexOf(checkmod);
-					foreach (string sDependency in mod.Dependencies)
-					{
-						ModDependency dependency = new ModDependency(sDependency);
-						if (dependency.ID == "" && dependency.Folder == "")
-							return false;
+            foreach (var mod in allMods)
+            {
+                if (!modList.Contains(mod.Key))
+                    outModList.Add(mod.Value);
+            }
 
-						string depName = dependency.GetDependencyName();
+            return outModList;
+        }
 
-						bool modExists = false;
-						if (cMods.ContainsKey(dependency.ID))
-							modExists = true;
-						else if (cMods.ContainsValue(dependency.Folder))
-							modExists = true;
-						else if (cMods.ContainsValue(dependency.Name))
-						{
-							dependency.Folder = dependency.Name;
-							modExists = true;
-						}
+        /// <summary>
+        /// Checks through mod dependencies for all enabled mods, verifies dependencies are all enabled and in their correct order.
+        /// 
+        /// If the dependencies are not enabled or are missing, messages are triggered for the end user to inform them of the issue.
+        /// </summary>
+        /// <param name="enabledMods"></param>
+        /// <param name="allMods"></param>
+        /// <returns>False if no issues are found, True if any dependency issues are found.</returns>
+        public static async Task<bool> CheckDependencies(List<string> enabledMods, Dictionary<string, SAModInfo> allMods)
+        {
+            List<SAModInfo> enabledModInfoList = GetEnabledMods(enabledMods, allMods);
+            List<SAModInfo> disabledModInfoList = GetDisabledMods(enabledMods, allMods);
 
-						StringBuilder sb = new StringBuilder();
-						if (modExists)
-						{
-							// If Dependency Mod Exists, check if mod is active.
-							if (modlist.Contains(dependency.Folder))
-							{
-								int cID = modlist.IndexOf(dependency.Folder);
-								if (mID < cID)
-								{
-									// Dependency Mod is enabled, but is lower in priority.
+            // Loop through enabled mods and check for dependencies.
+            foreach (SAModInfo mod in enabledModInfoList)
+            {
+                // If Dependencies are 0, we move on to the next one.
+                if (mod.Dependencies.Count <= 0)
+                    continue;
 
-									sb.AppendLine($"{depName} {Lang.GetString("ModDependency.Dependency.EnabledOrder")} {mod.Name}" + ".");
-                                    new MessageWindow(Lang.GetString("ModDependency.Dependency.Header"), sb.ToString(), button: MessageWindow.Buttons.OKCancel).ShowDialog();
-									check = true;
-								}
-							}
-							else
-							{
-								// Dependency Mod is not enabled but exists.
+                int modIndex = enabledModInfoList.IndexOf(mod); // Current mod's index in the list.
+                List<ModDependency> dependenciesMissing = [];
+                StringBuilder sb = new();
+                int countMissing = 0;
 
-								sb.AppendLine($"{depName} {Lang.GetString("ModDependency.Dependency.DisabledOrder1")}");
-								sb.AppendLine($"{Lang.GetString("ModDependency.Dependency.DisabledOrder2")} {mod.Name}" + ".");
-								new MessageWindow(Lang.GetString("ModDependency.Dependency.Header"), sb.ToString(), button: MessageWindow.Buttons.OKCancel).ShowDialog();
-								check = true;
-							}
-						}
-						else
-						{
-							// Dependency Mod is not enabled.
-							sb.AppendLine($"{Lang.GetString("CommonStrings.Dependency")} {depName} {Lang.GetString("ModDependency.Dependency.NotInstalled1")}");
-							sb.AppendLine($"{Lang.GetString("ModDependency.Dependency.NotInstalled2")} {depName} {Lang.GetString("ModDependency.Dependency.NotInstalled3")} {mod.Name}" + ".");
-							
-							if (dependency.Link == "")
-							{
-								// Dependency Mod does not have a link provided.
-								new MessageWindow(Lang.GetString("ModDependency.Dependency.Header"), sb.ToString(), button: MessageWindow.Buttons.OKCancel).ShowDialog();
-								check = true;
-							}
-							else
-							{
-								// Dependency Mod has a link and we offer to take the user to the download directly.
-								sb.AppendLine(Lang.GetString("ModDependency.Dependency.NotInstalled4"));
-								MessageWindow dg = new MessageWindow(Lang.GetString("ModDependency.Dependency.Header"), sb.ToString(), button: MessageWindow.Buttons.YesNo);
-								dg.ShowDialog();
-								if (dg.isYes)
-								{
-									var ps = new ProcessStartInfo(dependency.Link)
-									{
-										UseShellExecute = true,
-										Verb = "open"
-									};
-									Process.Start(ps);
-								}
-								check = true;
-							}
-						}
-					}
-				}
-			}
+                foreach (string dep in mod.Dependencies)
+                {
+                    // This variable is used to check if the mod was validated before running further checks after checking the enabled mods list.
+           
+                    ModDependency dependency = new(dep);
 
-			return check;
-		}
-	}
+                    bool validated = false;
+                    // Loop through enabled mods for dependency matching and verify their placement in the list is higher than the current mod.
+                    foreach (SAModInfo enabledMod in enabledModInfoList)
+                    {
+                        if (enabledMod.ModID == dependency.ID || enabledMod.Name == dependency.Name)
+                        {
+                            int depIndex = enabledModInfoList.IndexOf(enabledMod);
+
+                            // If Dependency is a lower index than the Mod's index, we can go ahead and return false.
+                            if (depIndex < modIndex)
+                            {
+                                validated = true;
+                            }
+                            else
+                            {
+                                // If the Dependency is not a lower index, alert the user and return true.
+                                sb.AppendLine($"{dependency.Name} {Lang.GetString("ModDependency.Dependency.EnabledOrder")} {mod.Name}" + ".");
+                                new MessageWindow(Lang.GetString("ModDependency.Dependency.Header"), sb.ToString(), button: MessageWindow.Buttons.OKCancel).ShowDialog();
+                                return true;
+                            }
+                        }
+                    }
+
+                    // If the dependency was validated in the previous check, we can move to the next dependency check.
+                    if (validated)
+                        continue;
+
+                    // Loop through disabled mods and check for the dependency.
+                    foreach (SAModInfo disabledMod in disabledModInfoList)
+                    {
+                        if (disabledMod.ModID == dependency.ID || disabledMod.Name == dependency.Name)
+                        {
+                            sb.AppendLine($"{dependency.Name} {Lang.GetString("ModDependency.Dependency.DisabledOrder1")}");
+                            sb.AppendLine($"{Lang.GetString("ModDependency.Dependency.DisabledOrder2")} {mod.Name}" + ".");
+                            new MessageWindow(Lang.GetString("ModDependency.Dependency.Header"), sb.ToString(), button: MessageWindow.Buttons.OKCancel).ShowDialog();
+                            return true;
+                        }
+                    }
+
+
+                    // If the dependency does not exist in any capacity, alert the user and offer a download link if possible.
+                    if (countMissing == 0)
+                        sb.AppendLine($"{Lang.GetString("ModDependency.Dependency.NotInstalled1")}");
+
+                    countMissing++;
+
+                    sb.AppendLine($"{dependency.Name}");
+
+                    dependenciesMissing.Add(dependency);
+
+                    if (dependency.Link == "")
+                    {
+                        // Dependency Mod does not have a link provided.
+                        new MessageWindow(Lang.GetString("ModDependency.Dependency.Header"), sb.ToString(), button: MessageWindow.Buttons.OKCancel).ShowDialog();
+                        return true;
+                    }
+
+                }
+
+                if (countMissing > 0)
+                {
+
+                    // Dependency Mod has a link and we offer to take the user to the download directly.
+                    sb.AppendLine($"{Lang.GetString("ModDependency.Dependency.NotInstalled2") + " " + Lang.GetString("ModDependency.Dependency.NotInstalled3") + " " + mod.Name}");
+                    sb.AppendLine($"{Lang.GetString("ModDependency.Dependency.NotInstalled4")}");
+                    MessageWindow dg = new(Lang.GetString("ModDependency.Dependency.Header"), sb.ToString(), button: MessageWindow.Buttons.YesNo);
+                    dg.ShowDialog();
+
+                    if (dg.isYes)
+                    {
+                        
+                        string[] lines = new string[countMissing];
+
+                        for (int i = 0; i < countMissing; i++)
+                        {
+                            if (dependenciesMissing[i].Link.Contains("git"))
+                            {
+                                var ps = new ProcessStartInfo(dependenciesMissing[i].Link)
+                                {
+                                    UseShellExecute = true,
+                                    Verb = "open"
+                                };
+
+                                Process.Start(ps);
+                                continue;
+                            }
+
+                            lines[i] += dependenciesMissing[i].Link;
+                        }
+
+                        UIHelper.TempDisableSaveAndPlayButton(2000);
+                        await DownloadModUrls.Download(lines);
+                    }
+                    return true;
+                }
+            }
+
+            // If we get here, return false so the game will boot as usual.
+            return false;
+        }
+    }
 }

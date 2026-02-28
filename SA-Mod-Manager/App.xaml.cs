@@ -16,6 +16,15 @@ using System.Data;
 using SAModManager.UI;
 using SAModManager.Controls.SADX;
 using SAModManager.Profile;
+using Newtonsoft.Json;
+using static TheArtOfDev.HtmlRenderer.Adapters.RGraphicsPath;
+using System.Net.Http;
+using System.Text.RegularExpressions;
+using System.Text;
+using System.Collections.ObjectModel;
+using SAModManager.Management;
+using System.Windows.Interop;
+using System.Windows.Media;
 
 namespace SAModManager
 {
@@ -31,7 +40,8 @@ namespace SAModManager
         public static string VersionString = $"{Version.Major}.{Version.Minor}.{Version.Revision}";
         public static readonly string StartDirectory = AppDomain.CurrentDomain.BaseDirectory;
         public static string ConfigFolder = Directory.Exists(Path.Combine(StartDirectory, "SAManager")) ? Path.Combine(StartDirectory, "SAManager") : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SAManager");
-        public static string extLibPath = Path.Combine(ConfigFolder, "extlib");
+        public static string oldExtLibPath = Path.Combine(ConfigFolder, "extlib"); //for migration
+        public static string extLibPath = oldExtLibPath; //will be updated if a game is set as new path use mods folder
         public static readonly string tempFolder = Path.Combine(StartDirectory, "SATemp");
         public static string crashFolder = Path.Combine(ConfigFolder, "CrashDump");
         public static bool isVanillaTransition = false; //used when installing the manager from an update
@@ -42,11 +52,12 @@ namespace SAModManager
 
         public static string ManagerConfigFile = Path.Combine(ConfigFolder, "Manager.json");
         public static ManagerSettings ManagerSettings { get; set; }
-		public static Profiles Profiles { get; set; }
+        public static Profiles Profiles { get; set; } = new Profiles();
 
         private static readonly Mutex mutex = new(true, pipeName);
         public static Updater.UriQueue UriQueue;
         public static string RepoCommit = SAModManager.Properties.Resources.Version.Trim();
+        public static bool isDev = !string.IsNullOrEmpty(SAModManager.Properties.Resources.Dev);
 
         public static LangEntry CurrentLang { get; set; }
         public static LanguageList LangList { get; set; }
@@ -54,7 +65,10 @@ namespace SAModManager
         public static ThemeEntry CurrentTheme { get; set; }
         public static bool IsLightTheme = false;
         public static ThemeList ThemeList { get; set; }
-        public static Game CurrentGame = new();
+        public static List<string> UpdateChannels { get; set; } = ["Release", "Development"];
+        public static string CurrentChannel { get; set; } = !isDev ? UpdateChannels[0] : UpdateChannels[1];
+
+        public static Game CurrentGame = GamesInstall.Unknown;
         public static List<Game> GamesList = new();
 
         [STAThread]
@@ -100,16 +114,9 @@ namespace SAModManager
             Steam.Init();
             SetupLanguages();
             SetupThemes();
-            ManagerSettings = LoadManagerConfig();
+            LoadManagerConfig();
             await SAModManager.Startup.StartupCheck();
 
-            await InitUriAsync(args, alreadyRunning);
-
-            if (alreadyRunning)
-            {
-                Current.Shutdown();
-                return;
-            }
 
 #if !DEBUG
             AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
@@ -120,10 +127,66 @@ namespace SAModManager
 
             ShutdownMode = ShutdownMode.OnMainWindowClose;
 
+            GamesInstall.AddGamesInstall();
+
+            if (App.GamesList.Count <= 0 || GamesInstall.IsGameListEmpty())
+            {
+                App.GamesList.Add(GamesInstall.Unknown);
+                App.CurrentGame = App.GamesList[0];
+            }
+
+
+            await InitUriAsync(args, alreadyRunning);
+
+            if (alreadyRunning)
+            {
+                Current.Shutdown();
+                return;
+            }
+
+            if (isLinux)
+                ManagerSettings.UseSoftwareRendering = true;
+
+            if (ManagerSettings.UseSoftwareRendering)
+			    RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
+
             MainWindow = new MainWindow();
             base.OnStartup(e);
             MainWindow.Show();
 
+        }
+
+        //todo delete on next update
+        public static void RemoveExeFromPath()
+        {
+            if (Util.IsStringValid(App.CurrentGame?.gameDirectory))
+            {
+                if (App.CurrentGame.gameDirectory.Contains(".exe"))
+                {
+                    App.CurrentGame.gameDirectory = Path.GetDirectoryName(App.CurrentGame.gameDirectory);
+                }
+            }
+        }
+        public static void UpdateDependenciesLocation()
+        {
+            if (Directory.Exists(App.extLibPath) == false && Directory.Exists(App.oldExtLibPath))
+            {
+                try
+                {
+                    Util.CreateSafeDirectory(App.extLibPath);
+
+                    foreach (string dirPath in Directory.GetDirectories(App.oldExtLibPath, "*", SearchOption.AllDirectories))
+                    {
+                        Util.CreateSafeDirectory(dirPath.Replace(App.oldExtLibPath, App.extLibPath));
+                    }
+
+                    foreach (string newPath in Directory.GetFiles(App.oldExtLibPath, "*.*", SearchOption.AllDirectories))
+                    {
+                        File.Copy(newPath, newPath.Replace(App.oldExtLibPath, App.extLibPath), true);
+                    }
+                }
+                catch { }
+            }
         }
 
         public static void SetupLanguages()
@@ -141,26 +204,41 @@ namespace SAModManager
             if (LangList is null)
                 return;
 
-            string name = "Languages/" + CurrentLang.FileName + ".xaml";
-            ResourceDictionary dictionary = new()
+            try
             {
-                Source = new Uri(name, UriKind.Relative)
-            };
+                string name = "Languages/" + CurrentLang.FileName + ".xaml";
+                ResourceDictionary dictionary = new()
+                {
+                    Source = new Uri(name, UriKind.Relative)
+                };
 
-            //if a language different than english is set, remove the previous one.
-            if (Current.Resources.MergedDictionaries.Count >= 5)
+                //if a language different than english is set, remove the previous one.
+                if (Current.Resources.MergedDictionaries.Count >= 5)
+                {
+                    Current.Resources.MergedDictionaries.RemoveAt(4);
+                }
+
+                //if we go back to english, give up the process as it's always in the list.
+                if (Current.Resources.MergedDictionaries[3].Source.ToString().Contains("en-EN") && name.Contains("en-EN"))
+                {
+                    return;
+                }
+
+                //add new language
+                Current.Resources.MergedDictionaries.Insert(4, dictionary);
+            }
+            catch (Exception ex)
             {
-                Current.Resources.MergedDictionaries.RemoveAt(4);
+                var msg = new MessageWindow(Lang.GetString("MessageWindow.DefaultTitle.Error"), string.Format(Lang.GetString("MessageWindow.Errors.LanguageSwitch"), CurrentLang.FileName, ex.Message), MessageWindow.WindowType.IconMessage, MessageWindow.Icons.Error, MessageWindow.Buttons.OK);
+                msg.ShowDialog();
+                var mainWindow = ((MainWindow)Application.Current.MainWindow);
+                if (mainWindow != null)
+                {
+                    mainWindow.comboLanguage.SelectedIndex = 0;
+                }
+
             }
 
-            //if we go back to english, give up the process as it's always in the list.
-            if (Current.Resources.MergedDictionaries[3].Source.ToString().Contains("en-EN") && name.Contains("en-EN"))
-            {
-                return;
-            }
-
-            //add new language
-            Current.Resources.MergedDictionaries.Insert(4, dictionary);
         }
 
         public static void SetLightBool()
@@ -278,28 +356,75 @@ namespace SAModManager
             }
         }
 
-        //left over from previous method to update, maybe will be re used for a dev purpose.
-        /* private async static void GetArtifact()
-         {
-             GitHubAction latestAction = await GitHub.GetLatestAction();
-             GitHubArtifact info = null;
 
-             if (latestAction != null)
-             {
-                 List<GitHubArtifact> artifacts = await GitHub.GetArtifactsForAction(latestAction.Id);
+        public static async Task<(bool, WorkflowRunInfo, GitHubArtifact)> GetArtifact()
+        {
 
-                 if (artifacts != null)
-                 {
-                     bool is64BitSystem = Environment.Is64BitOperatingSystem;
-                     string targetArchitecture = is64BitSystem ? "x64" : "x86";
+            var workflowRun = await GitHub.GetLatestWorkflowRun();
 
-                     info = artifacts.FirstOrDefault(t => t.Expired == false && t.Name.Contains("Release-" + targetArchitecture));
+            if (workflowRun is null)
+                return (false, null, null);
 
-                     // If there's no specific architecture match, try to get a generic "Release" artifact
-                     info ??= artifacts.FirstOrDefault(t => t.Expired == false && t.Name.Contains("Release"));
-                 }
-             }
-         }*/
+
+            bool hasUpdate = RepoCommit != workflowRun.HeadSHA;
+
+            if (hasUpdate == false)
+                return (false, null, null);
+
+
+            GitHubAction latestAction = await GitHub.GetLatestAction();
+            GitHubArtifact info = null;
+
+            if (latestAction != null)
+            {
+                List<GitHubArtifact> artifacts = await GitHub.GetArtifactsForAction(latestAction.Id);
+
+                if (artifacts != null)
+                {
+                    bool is64BitSystem = Environment.Is64BitOperatingSystem;
+                    string targetArchitecture = is64BitSystem ? "x64" : "x86";
+
+                    info = artifacts.FirstOrDefault(t => t.Expired == false && t.Name.Contains("Release-" + targetArchitecture));
+
+                    // If there's no specific architecture match, try to get a generic "Release" artifact
+                    info ??= artifacts.FirstOrDefault(t => t.Expired == false && t.Name.Contains("Release"));
+                }
+            }
+
+            return (hasUpdate, workflowRun, info);
+        }
+
+        public static async Task<bool> PerformDevUpdateManagerCheck()
+        {
+            var update = await App.GetArtifact();
+            if (update.Item2 is not null)
+            {
+                string changelog = await GitHub.GetGitChangeLog(update.Item2.HeadSHA);
+                var manager = new InfoManagerUpdate(changelog, "(Dev Version)", null, true);
+                manager.ShowDialog();
+
+                if (manager.DialogResult != true)
+                    return false;
+
+                Logger.Log("Now Installing Latest Dev Build Update ...");
+
+                string dlLink = string.Format(SAModManager.Properties.Resources.URL_SAMM_UPDATE, update.Item2.CheckSuiteID, update.Item3.Id);
+                string fileName = update.Item3.Name;
+                string version = update.Item2.HeadSHA[..7];
+                string destFolder = App.tempFolder;
+                Util.CreateSafeDirectory(destFolder);
+
+                var dl = new ManagerUpdate(dlLink, destFolder, fileName, version)
+                {
+                    DownloadCompleted = async () => await ManagerUpdate.DownloadManagerCompleted(destFolder, fileName)
+                };
+
+                dl.StartManagerDL();
+                return true;
+            }
+
+            return false;
+        }
 
         public static async Task<bool> PerformUpdateManagerCheck()
         {
@@ -314,10 +439,10 @@ namespace SAModManager
                 if (update.Item1 == false) //no update found
                     return false;
 
-                string changelog = await GitHub.GetGitChangeLog(update.Item2); 
+                string changelog = await GitHub.GetGitChangeLog(update.Item2);
 
-                if (string.IsNullOrEmpty(changelog)) //update found but no changelog (?)
-                    return false;
+                if (!Util.IsStringValid(changelog)) //update found but no changelog (?)
+                    changelog = "Error, no Changelog found";
 
                 var manager = new InfoManagerUpdate(changelog, update.Item4);
                 manager.ShowDialog();
@@ -327,14 +452,14 @@ namespace SAModManager
 
                 Logger.Log("Now Installing New Manager Update...");
                 // string dlLink = string.Format(SAModManager.Properties.Resources.URL_SAMM_UPDATE, update.Item2.CheckSuiteID, update.Item3.Id);
-                string dlLink = update.Item3.DownloadUrl;         
-                string fileName = update.Item3.Name;     
+                string dlLink = update.Item3.DownloadUrl;
+                string fileName = update.Item3.Name;
                 string version = update.Item4;
                 string destFolder = App.tempFolder;
-                Directory.CreateDirectory(destFolder);
+                Util.CreateSafeDirectory(destFolder);
 
                 var dl = new ManagerUpdate(dlLink, destFolder, fileName, version)
-                { 
+                {
                     DownloadCompleted = async () => await ManagerUpdate.DownloadManagerCompleted(destFolder, fileName)
                 };
 
@@ -348,7 +473,7 @@ namespace SAModManager
             }
         }
 
-        private static async Task<(bool, string)> CheckLoaderUpdate()
+        private static async Task<(bool, string)> CheckLoaderUpdateOld()
         {
             var lastCommit = await GitHub.GetLoaderHashCommit();
 
@@ -356,7 +481,7 @@ namespace SAModManager
                 return (false, null);
 
             string loaderVersion = string.Empty;
-            string loaderversionPath = App.CurrentGame.loader.loaderVersionpath;
+            string loaderversionPath = App.CurrentGame.loader.mlverPath;
             if (File.Exists(loaderversionPath))
             {
                 loaderVersion = File.ReadAllText(loaderversionPath);
@@ -365,111 +490,91 @@ namespace SAModManager
             return (loaderVersion != lastCommit, lastCommit);
         }
 
+        private static async Task<(bool, GitHubAsset, string, StringBuilder)> CheckLoaderUpdate()
+        {
+            bool hasUpdate = false;
+            StringBuilder changelog = new StringBuilder();
+            try
+            {
+                string url_releases = App.CurrentGame.loader.URL;
+                string text_releases = string.Empty;
+                string assetName = App.CurrentGame.loader.name + ".7z";
+                string mlverfile = App.CurrentGame.loader.mlverPath;
+                string currentTagName = File.Exists(mlverfile) ? File.ReadAllText(mlverfile) : App.CurrentGame.loader.defaultReleaseID;
+
+                if (!uint.TryParse(currentTagName, out uint currentID))
+                    currentID = uint.Parse(App.CurrentGame.loader.defaultReleaseID);
+
+                var httpClient = UpdateHelper.HttpClient;
+                string apiUrl = App.CurrentGame.loader.URL;
+
+                HttpResponseMessage response = await httpClient.GetAsync(apiUrl);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    string responseBody = await response.Content.ReadAsStringAsync();
+                    var release = JsonConvert.DeserializeObject<GitHubRelease>(responseBody);
+                    if (release != null && release.Assets != null)
+                    {
+                        var targetAsset = release.Assets.FirstOrDefault(asset => asset.Name.Equals(assetName, StringComparison.OrdinalIgnoreCase));
+                        if (targetAsset != null)
+                        {
+                            if (uint.TryParse(release.TagName, out uint releaseID))
+                            {
+                                if (releaseID > currentID)
+                                {
+                                    hasUpdate = true;
+                                    changelog.AppendLine(string.Format("Revision {0}\n{1}\n", release.TagName, release.Body));
+                                }
+                            }
+
+
+                            return (hasUpdate, targetAsset, release.TagName, changelog);
+
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error fetching latest release: " + ex.Message);
+            }
+
+
+            return (false, null, null, null);
+        }
+
+        //also check for code, patches, lib  etc.
         public static async Task PerformUpdateLoaderCheck()
         {
             try
             {
                 var mainWindow = ((MainWindow)Application.Current.MainWindow);
                 mainWindow.UpdateManagerStatusText(Lang.GetString("UpdateStatus.ChkLoaderUpdate"));
+
                 var update = await CheckLoaderUpdate();
 
                 if (update.Item1 == false) //no update found
                     return;
 
-                string changelog = await GitHub.GetGitLoaderChangeLog(update.Item2); //item2 is commit hash
+                string changeLog = update.Item4.ToString();
 
-                if (string.IsNullOrEmpty(changelog) || App.CancelUpdate) //if string is null, we got error(s) so the DL can't continue
+                if (!Util.IsStringValid(changeLog) || App.CancelUpdate) //if string is null, we got error(s) so the DL can't continue
                     return;
 
 
-                var manager = new InfoManagerUpdate(changelog, update.Item2[..7], App.CurrentGame.loader.name);
+                var manager = new InfoManagerUpdate(changeLog, update.Item3, App.CurrentGame.loader.name);
                 manager.ShowDialog();
 
                 if (manager.DialogResult != true || App.CancelUpdate)
                     return;
 
-                if (await GamesInstall.UpdateLoader(App.CurrentGame))
-                {
-                    File.WriteAllText(App.CurrentGame.loader.loaderVersionpath, update.Item2);
-                    await GamesInstall.InstallAndUpdateDependencies(App.CurrentGame, true);
- 
-                }
+                await GamesInstall.UpdateLoader(App.CurrentGame, update.Item2.DownloadUrl);
             }
             catch
             { }
         }
 
-        public static async Task<bool> PerformUpdateCodesCheck()
-        {
-            var mainWindow = ((MainWindow)Application.Current.MainWindow);
-            try
-            {
-                mainWindow.UpdateManagerStatusText(Lang.GetString("UpdateStatus.ChkCodesUpdates"));
-
-                var codesPath = Path.Combine(App.CurrentGame.modDirectory, "Codes.lst");
-
-                bool CodeExist = File.Exists(codesPath);
-
-                if (CodeExist)
-                {
-                    string localCodes = File.ReadAllText(codesPath);
-                    var httpClient = UpdateHelper.HttpClient;
-
-                    string repoCodes = await httpClient.GetStringAsync(App.CurrentGame.codeURL + $"?t={DateTime.Now:yyyyMMddHHmmss}");
-
-                    if (localCodes == repoCodes)
-                    {
-                        return false;
-                    }
-                }
-
-                return App.CancelUpdate == false;
-
-
-            }
-            catch
-            {
-
-                ((MainWindow)Application.Current.MainWindow).UpdateManagerStatusText(Lang.GetString("UpdateStatus.FailedUpdateCodes"));
-
-            }
-
-            return false;
-        }
-
-        public static async Task<bool> PerformUpdatePatchesCheck()
-        {
-            try
-            {
-                var mainWindow = ((MainWindow)Application.Current.MainWindow);
-                mainWindow.UpdateManagerStatusText(Lang.GetString("UpdateStatus.ChkPatchesUpdates"));
-
-                var jsonPath = Path.Combine(App.CurrentGame.modDirectory, "Patches.json");
-
-                if (File.Exists(jsonPath))
-                {
-                    string localCodes = File.ReadAllText(jsonPath);
-                    var httpClient = UpdateHelper.HttpClient;
-
-                    string repoCodes = await httpClient.GetStringAsync(App.CurrentGame.patchURL + $"?t={DateTime.Now:yyyyMMddHHmmss}");
-
-                    if (localCodes == repoCodes)
-                    {
-                        return false;
-                    }
-                }
-
-                return App.CancelUpdate == false;
-            }
-            catch
-            {
-
-                ((MainWindow)Application.Current.MainWindow).UpdateManagerStatusText(Lang.GetString("UpdateStatus.FailedUpdatePatches"));
-
-            }
-
-            return false;
-        }
 
         public static async Task<bool> PerformUpdateAppLauncherCheck()
         {
@@ -534,8 +639,7 @@ namespace SAModManager
         {
             try
             {
-                if (!Directory.Exists(App.ConfigFolder))
-                    Directory.CreateDirectory(App.ConfigFolder);
+                Util.CreateSafeDirectory(App.ConfigFolder);
             }
             catch
             {
@@ -577,6 +681,22 @@ namespace SAModManager
             }
         }
 
+        public static void ExtractResource(string resourceName, string outputPath)
+        {
+
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            string fullResourceName = assembly.GetName().Name + ".Resources." + resourceName;
+            using Stream stream = assembly.GetManifestResourceStream(fullResourceName);
+            if (stream == null)
+            {
+                Console.WriteLine($"Resource not found: {fullResourceName}");
+                return;
+            }
+
+            using FileStream fileStream = File.Create(outputPath);
+            stream.CopyTo(fileStream);
+        }
+
         public static Uri GetResourceUri(string resourceName)
         {
             // Get the assembly where the resource is located
@@ -586,52 +706,93 @@ namespace SAModManager
             string fullResourceName = assembly.GetName().Name + ".Resources." + resourceName;
 
             // Load the resource stream from the assembly
-            using (Stream stream = assembly.GetManifestResourceStream(fullResourceName))
+            using Stream stream = assembly.GetManifestResourceStream(fullResourceName);
+            // Check if the resource stream is found
+            if (stream == null)
             {
-                // Check if the resource stream is found
-                if (stream == null)
-                {
-                    Console.WriteLine($"Resource not found: {fullResourceName}");
-                    return null;
-                }
-
-                // Copy the resource stream to a temporary file
-                string tempFilePath = Path.GetTempFileName();
-                using (FileStream fileStream = File.Create(tempFilePath))
-                {
-                    stream.CopyTo(fileStream);
-                }
-
-                // Return the URI to the temporary file
-                return new Uri($"file://{tempFilePath}");
+                Console.WriteLine($"Resource not found: {fullResourceName}");
+                return null;
             }
+
+            // Copy the resource stream to a temporary file
+            string tempFilePath = Path.GetTempFileName();
+            using (FileStream fileStream = File.Create(tempFilePath))
+            {
+                stream.CopyTo(fileStream);
+            }
+
+            // Return the URI to the temporary file
+            return new Uri($"file://{tempFilePath}");
         }
 
-        private static ManagerSettings LoadManagerConfig()
+        private static void LoadManagerConfig()
         {
-            ManagerSettings settings = ManagerSettings.Deserialize(Path.Combine(ConfigFolder, ManagerConfigFile));
+            SettingsManager.InitializeSettingsManager();
 
-            switch (settings.CurrentSetGame)
+            if (ManagerSettings is not null)
             {
-                case (int)SetGame.SADX:
-                    CurrentGame = GamesInstall.SonicAdventure;
-                    break;
-                case (int)SetGame.SA2:
-                    CurrentGame = GamesInstall.SonicAdventure2;
-                    break;
-            }
+                if (ManagerSettings.GameEntries.Count > 0)
+                {
+                    var curGame = SettingsManager.GetCurrentGame();
+                    var currentGameType = curGame.Type;
+                    //if game directory is no longer found, swap to the next available game
+                    if (Directory.Exists(curGame.Directory) == false)
+                    {
+                        var curID = curGame.Type;
+                        if (ManagerSettings.GameEntries.Count > 1)
+                        {
+                            foreach (var gameEntry in App.ManagerSettings.GameEntries)
+                            {
+                                if (gameEntry.Type != curID)
+                                {
+                                    App.GamesList.Remove(GamesInstall.GetGamePerID(currentGameType));
+                                    App.ManagerSettings.GameEntries.Remove(curGame);
+                                    App.ManagerSettings.CurrentSetGame = (int)gameEntry.Type;
+                                    currentGameType = gameEntry.Type;
+                                    break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            App.GamesList.Remove(GamesInstall.GetGamePerID(currentGameType));
+                            App.ManagerSettings.GameEntries.Remove(curGame);
+                            App.ManagerSettings.CurrentSetGame = 0;
+                            currentGameType = GameEntry.GameType.Unsupported;
+                        }
 
-            return settings;
+                    }
+
+                    switch (currentGameType)
+                    {
+                        case GameEntry.GameType.Unsupported:
+                            CurrentGame = GamesInstall.Unknown;
+                            break;
+                        case GameEntry.GameType.SADX:
+                            CurrentGame = GamesInstall.SonicAdventure;
+                            CurrentGame.gameDirectory = SettingsManager.GetCurrentGame().Directory;
+                            break;
+                        case GameEntry.GameType.SA2:
+                            CurrentGame = GamesInstall.SonicAdventure2;
+                            CurrentGame.gameDirectory = SettingsManager.GetCurrentGame().Directory;
+                            break;
+                    }
+                }
+                else
+                {
+                    CurrentGame = GamesInstall.Unknown;
+                }
+            }
         }
 
         public static async Task EnableOneClickInstall()
         {
             try
             {
-                if (string.IsNullOrEmpty(App.CurrentGame?.oneClickName) == false)
+                if (Util.IsStringValid(App.CurrentGame.oneClickName))
                 {
                     string execPath = Environment.ProcessPath;
-                    string clickName = App.CurrentGame?.oneClickName;
+                    string clickName = App.CurrentGame.oneClickName;
                     await Process.Start(new ProcessStartInfo(execPath, $"urlhandler \"{clickName}\"") { UseShellExecute = true }).WaitForExitAsync();
                 }
             }

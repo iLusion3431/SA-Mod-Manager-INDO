@@ -123,6 +123,7 @@ namespace SAModManager
                 return;
             }
 
+
             SaveMod(moddir);
             ((MainWindow)Application.Current.MainWindow).Save();
             ((MainWindow)Application.Current.MainWindow).Refresh();
@@ -143,15 +144,18 @@ namespace SAModManager
         #region Properties Tab Functions
         private void nameBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
         {
-            if (!string.IsNullOrEmpty(nameBox.Text))
+            if (Util.IsStringValid(nameBox.Text) && Util.IsValidFileName(nameBox.Text))
             {
                 modIDBox.Text = GenerateModID().Replace(" ", "");
 
                 if (editMod == false)
                     folderName = Path.Combine(App.CurrentGame.modDirectory, nameBox.Text);
+
+                UIHelper.EnableButton(ref okBtn);
             }
             else
             {
+                UIHelper.DisableButton(ref okBtn);
                 modIDBox.Text = string.Empty;
             }
         }
@@ -183,7 +187,7 @@ namespace SAModManager
         #region Dependency Tab Functions
         private void btnAddDependency_Click(object sender, RoutedEventArgs e)
         {
-            if (!string.IsNullOrEmpty(nameBox.Text) && !string.IsNullOrEmpty(folderName))
+            if (Util.IsStringValid(nameBox.Text) && Util.IsStringValid(folderName))
             {
 
                 selectWindow = new SelectDependencies(dependencies);
@@ -383,7 +387,7 @@ namespace SAModManager
         {
             mod.IncludeDirs = new();
 
-            if (string.IsNullOrEmpty(includeDirBox.Text) == false)
+            if (Util.IsStringValid(includeDirBox.Text))
             {
                 string text = includeDirBox.Text.Trim();
                 string[] inclurDirList = text.Split(',');
@@ -391,13 +395,11 @@ namespace SAModManager
                 foreach (string includeDir in inclurDirList)
                 {
                     string trimmedIncludeDir = includeDir.Trim();
-                    if (!string.IsNullOrEmpty(trimmedIncludeDir))
+                    if (Util.IsStringValid(trimmedIncludeDir))
                     {
                         mod.IncludeDirs.Add(trimmedIncludeDir);
                         string includeDirFolder = Path.Combine(modPath, trimmedIncludeDir);
-
-                        if (Directory.Exists(includeDirFolder) == false)
-                            Directory.CreateDirectory(includeDirFolder);
+                        Util.CreateSafeDirectory(includeDirFolder);
                     }
                 }
             }
@@ -417,7 +419,7 @@ namespace SAModManager
                 foreach (string dep in mod.IncludeDirs)
                     includeDirBox.Text += dep + ", ";
 
-                if (string.IsNullOrEmpty(includeDirBox.Text) == false) //remove the last , at the end
+                if (Util.IsStringValid(includeDirBox.Text)) //remove the last , at the end
                     includeDirBox.Text = includeDirBox.Text.Remove(includeDirBox.Text.Length - 2, 2);
             }
         }
@@ -462,17 +464,17 @@ namespace SAModManager
         #region Build Functions
         private void NewModSetup(string moddir)
         {
-            Directory.CreateDirectory(moddir);
+            Util.CreateSafeDirectory(moddir);
 
             if (categoryBox.Text == "Music")
             {
                 switch (App.CurrentGame.id)
                 {
-                    case SetGame.SADX:
-                        Directory.CreateDirectory(@Path.Combine(moddir, "system/SoundData/bgm/wma"));
+                    case GameEntry.GameType.SADX:
+                        Util.CreateSafeDirectory(@Path.Combine(moddir, "system/SoundData/bgm/wma"));
                         break;
-                    case SetGame.SA2:
-                        Directory.CreateDirectory(@Path.Combine(moddir, "gd_PC/ADX"));
+                    case GameEntry.GameType.SA2:
+                        Util.CreateSafeDirectory(@Path.Combine(moddir, "gd_PC/ADX"));
                         break;
                 }
 
@@ -481,12 +483,12 @@ namespace SAModManager
             {
                 switch (App.CurrentGame.id)
                 {
-                    case SetGame.SADX:
-                        Directory.CreateDirectory(@Path.Combine(moddir, "system/SoundData/SE"));
+                    case GameEntry.GameType.SADX:
+                        Util.CreateSafeDirectory(@Path.Combine(moddir, "system/SoundData/SE"));
                         break;
-                    case SetGame.SA2:
-                        Directory.CreateDirectory(@Path.Combine(moddir, "gd_PC/MPB"));
-                        Directory.CreateDirectory(@Path.Combine(moddir, "gd_PC/MLT"));
+                    case GameEntry.GameType.SA2:
+                        Util.CreateSafeDirectory(@Path.Combine(moddir, "gd_PC/MPB"));
+                        Util.CreateSafeDirectory(@Path.Combine(moddir, "gd_PC/MLT"));
                         break;
                 }
             }
@@ -494,11 +496,13 @@ namespace SAModManager
             {
                 switch (App.CurrentGame.id)
                 {
-                    case SetGame.SADX:
-                        Directory.CreateDirectory(Path.Combine(moddir, "textures"));
+                    case GameEntry.GameType.SADX:
+                        Util.CreateSafeDirectory(Path.Combine(moddir, "textures"));
+                        Util.CreateSafeDirectory(@Path.Combine(moddir, "ReplaceTex"));
                         break;
-                    case SetGame.SA2:
-                        Directory.CreateDirectory(@Path.Combine(moddir, "gd_PC/PRS"));
+                    case GameEntry.GameType.SA2:
+                        Util.CreateSafeDirectory(@Path.Combine(moddir, "gd_PC/PRS"));
+                        Util.CreateSafeDirectory(@Path.Combine(moddir, "ReplaceTex"));
                         break;
                 }
 
@@ -507,11 +511,11 @@ namespace SAModManager
             {
                 switch (App.CurrentGame.id)
                 {
-                    case SetGame.SADX:
-                        Directory.CreateDirectory(@Path.Combine(moddir, "system"));
+                    case GameEntry.GameType.SADX:
+                        Util.CreateSafeDirectory(@Path.Combine(moddir, "system"));
                         break;
-                    case SetGame.SA2:
-                        Directory.CreateDirectory(@Path.Combine(moddir, "gd_PC"));
+                    case GameEntry.GameType.SA2:
+                        Util.CreateSafeDirectory(@Path.Combine(moddir, "gd_PC"));
                         break;
                 }
             }
@@ -632,8 +636,8 @@ namespace SAModManager
 
         private void HandleSaveRedirection(string modDirectory)
         {
-            bool isSADX = App.CurrentGame?.id == Configuration.SetGame.SADX;
-            bool isSA2 = App.CurrentGame?.id == Configuration.SetGame.SA2;
+            bool isSADX = App.CurrentGame?.id == GameEntry.GameType.SADX;
+            bool isSA2 = App.CurrentGame?.id == GameEntry.GameType.SA2;
             string save = "SAVEDATA";
 
             if (isSA2)
@@ -665,7 +669,7 @@ namespace SAModManager
             {
                 if (!saveDirExist)
                 {
-                    Directory.CreateDirectory(fullSavepath);
+                    Util.CreateSafeDirectory(fullSavepath);
                 }
             }
         }
@@ -673,7 +677,7 @@ namespace SAModManager
 
         private void btnNewCode_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrEmpty(folderName) || string.IsNullOrEmpty(nameBox.Text))
+            if (!Util.IsStringValid(folderName) || !Util.IsStringValid(nameBox.Text))
                 return;
 
             NewCode newCodeWindow = new();

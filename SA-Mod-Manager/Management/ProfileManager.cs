@@ -1,15 +1,15 @@
-﻿using SAModManager.Configuration;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Text;
+using SAModManager.Configuration;
 using SAModManager.Configuration.SA2;
 using SAModManager.Configuration.SADX;
 using SAModManager.Ini;
 using SAModManager.UI;
-using System;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Text;
+using SAModManager.Profile;
 
-namespace SAModManager.Profile
+namespace SAModManager.Management
 {
     /// <summary>
     /// Static Class to manage the App Profiles.
@@ -17,16 +17,46 @@ namespace SAModManager.Profile
     static public class ProfileManager
     {
 		/// <summary>
+		/// Directory where the game profiles (<see cref="Configuration.SADX.GameSettings"/> or <see cref="Configuration.SA2.GameSettings"/>) are stored.
+		/// </summary>
+		private static string ProfilesDirectory 
+		{ 
+			get 
+			{
+				if (App.CurrentGame.modDirectory == null)
+					return string.Empty;
+				else
+					return Path.Combine(App.CurrentGame.modLoaderDirectory, "profiles"); 
+			}
+		}
+
+		/// <summary>
+		/// The file that stores the profiles info.
+		/// </summary>
+		private static string ProfilesFile
+		{
+			get { return Path.Combine(ProfilesDirectory, "Profiles.json"); }
+		}
+
+		public static string GetProfilesDirectory() { return ProfilesDirectory; }
+
+		/// <summary>
 		/// Checks if the Game Profile directory exists. Tries to create it if it doesn't. 
 		/// </summary>
 		/// <returns>Returns True when directory exists or has been created otherwise returns False.</returns>
 		private static bool CheckProfileDirectory()
 		{
-			if (!Directory.Exists(App.CurrentGame.ProfilesDirectory))
+            //profile shouldn't be created if no game are found
+            if (GamesInstall.IsGameListEmpty())
+				return false;
+
+            App.RemoveExeFromPath();
+
+            if (!Directory.Exists(ProfilesDirectory)) 
 			{
 				try
 				{
-					Directory.CreateDirectory(App.CurrentGame.ProfilesDirectory);
+					Util.CreateSafeDirectory(ProfilesDirectory);
 					return true;
 				}
 				catch (Exception ex)
@@ -36,6 +66,7 @@ namespace SAModManager.Profile
 					return false;
 				}
 			}
+
 			return true;
 		}
 
@@ -45,12 +76,10 @@ namespace SAModManager.Profile
 		/// <returns>Full path to currently selected game's Profiles.json file.</returns>
         private static string GetProfilePath()
         {
-            string s = App.CurrentGame.ProfilesDirectory;
-
-			if (string.IsNullOrEmpty(s))
-                return null;
-
-            return Path.Combine(s, "Profiles.json");
+			if (ProfilesDirectory.Length > 0 && CheckProfileDirectory())
+				return Path.Combine(ProfilesDirectory, "Profiles.json");
+			else
+				return string.Empty;
         }
 
         /// <summary>
@@ -77,13 +106,13 @@ namespace SAModManager.Profile
 
 			switch (App.CurrentGame.id)
 			{
-				case SetGame.SADX:
+				case GameEntry.GameType.SADX:
 					Configuration.SADX.GameSettings sadxSettings = new();
 					SADXLoaderInfo sadxLoader = IniSerializer.Deserialize<SADXLoaderInfo>(sourceFile);
-					sadxSettings.ConvertFromV0(sadxLoader);
+                    sadxSettings.ConvertFromV0(sadxLoader);
 					sadxSettings.Serialize(destFile);
 					break;
-				case SetGame.SA2:
+				case GameEntry.GameType.SA2:
 					Configuration.SA2.GameSettings sa2Settings = new();
 					SA2LoaderInfo sa2Loader = IniSerializer.Deserialize<SA2LoaderInfo>(sourceFile);
 					sa2Settings.ConvertFromV0(sa2Loader);
@@ -118,11 +147,11 @@ namespace SAModManager.Profile
 		{
 			switch (App.CurrentGame.id)
 			{
-				case SetGame.SADX:
+				case GameEntry.GameType.SADX:
 					Configuration.SADX.GameSettings sadxSettings = gameSettings as Configuration.SADX.GameSettings;
 					sadxSettings.Serialize(name);
 					break;
-				case SetGame.SA2:
+				case GameEntry.GameType.SA2:
 					Configuration.SA2.GameSettings sa2Settings = gameSettings as Configuration.SA2.GameSettings;
 					sa2Settings.Serialize(name);
 					break;
@@ -141,8 +170,8 @@ namespace SAModManager.Profile
 			{
 				if (entry.Name == oldname)
 				{
-					string oldFilePath = Path.Combine(App.CurrentGame.ProfilesDirectory, oldname + ".json");
-					string newFilePath = Path.Combine(App.CurrentGame.ProfilesDirectory, newname + ".json");
+					string oldFilePath = Path.Combine(ProfilesDirectory, oldname + ".json");
+					string newFilePath = Path.Combine(ProfilesDirectory, newname + ".json");
 
 					entry.Name = newname;
 					entry.Filename = newname + ".json";
@@ -162,7 +191,7 @@ namespace SAModManager.Profile
             {
                 if (entry.Name == name)
 				{
-					string filePath = Path.Combine(App.CurrentGame.ProfilesDirectory, entry.Filename);
+					string filePath = Path.Combine(ProfilesDirectory, entry.Filename);
                     if (File.Exists(filePath))
                     {
 						try
@@ -198,18 +227,26 @@ namespace SAModManager.Profile
             App.Profiles = Profiles.Deserialize(GetProfilePath());
         }
 
+		/// <summary>
+		/// Migrates a single profile from the supplied path.
+		/// </summary>
+		/// <param name="path">Path to the profile.</param>
+		/// <returns>True when successful, otherwise false.</returns>
 		public static bool MigrateProfile(string path)
 		{
-			if (File.Exists(path))
-			{
-				string sourceFile = path;
-				string destFile = Path.GetFileNameWithoutExtension(sourceFile) == App.CurrentGame.loader?.name ? "Default.json" : Path.GetFileNameWithoutExtension(sourceFile) + ".json";
+            if (File.Exists(path))
+            {
+                string sourceFile = path;
+                string destFile = Path.GetFileNameWithoutExtension(sourceFile) == App.CurrentGame.loader?.name ? "Default.json" : Path.GetFileNameWithoutExtension(sourceFile) + ".json";
 
-				File.Copy(Path.GetFullPath(path), Path.Combine(App.CurrentGame.ProfilesDirectory, destFile), true);
-				ConvertProfile(sourceFile, destFile);
-				return true;
-			}
-			else return false;
+                File.Copy(Path.GetFullPath(path), Path.Combine(ProfilesDirectory, destFile), true);
+                ConvertProfile(sourceFile, destFile);
+                return true;
+            }
+            else
+            {
+                return false;
+            }
 		}
 
 		/// <summary>
@@ -218,10 +255,10 @@ namespace SAModManager.Profile
 		/// </summary>
 		public static void MigrateProfiles(bool deletesource = false)
         {
-            if (string.IsNullOrEmpty(App.CurrentGame.gameDirectory) == false)
+            if (Util.IsStringValid(App.CurrentGame.gameDirectory))
             {
-                string modPath = Path.Combine(App.CurrentGame.gameDirectory, "mods");
-                Directory.CreateDirectory(modPath);
+                string modPath = App.CurrentGame.modDirectory;
+                Util.CreateSafeDirectory(modPath);
 
                 if (CheckProfileDirectory() && Directory.Exists(modPath))
                 {
@@ -247,11 +284,11 @@ namespace SAModManager.Profile
 
 								switch (App.CurrentGame.id)
 								{
-									case SetGame.SADX:
+									case GameEntry.GameType.SADX:
 										Configuration.SADX.GameSettings sadxSettings = new();
 										sadxSettings.Serialize(destFile);
 										break;
-									case SetGame.SA2:
+									case GameEntry.GameType.SA2:
 										Configuration.SA2.GameSettings sa2Settings = new();
 										sa2Settings.Serialize(destFile);
 										break;
@@ -275,9 +312,9 @@ namespace SAModManager.Profile
 
             Profiles profiles = new();
 
-            if (App.CurrentGame.ProfilesDirectory is not null)
+            if (Util.IsStringValid(ProfilesDirectory) && Directory.Exists(ProfilesDirectory))
             {
-                foreach (var item in Directory.EnumerateFiles(App.CurrentGame.ProfilesDirectory, "*.json"))
+                foreach (var item in Directory.EnumerateFiles(ProfilesDirectory, "*.json"))
                 {
                     if (Path.GetFileName(item) != "Profiles.json")
                         profiles.ProfilesList.Add(new ProfileEntry(Path.GetFileNameWithoutExtension(item), Path.GetFileName(item)));
@@ -320,16 +357,72 @@ namespace SAModManager.Profile
                 return null;
         }
 
+		/// <summary>
+		/// Validates that the Profile index is within the boundaries of the list. Resets it to 0 if it is not in bounds.
+		/// </summary>
         public static void ValidateProfileIndex()
         {
             if (App.Profiles.ProfileIndex < 0 || App.Profiles.ProfileIndex > App.Profiles.ProfilesList.Count)
                 App.Profiles.ProfileIndex = 0;
         }
 
+		/// <summary>
+		/// Validates all profiles for the currently selected game.
+		/// </summary>
         public static void ValidateProfiles()
         {
             ValidateProfileIndex();
             App.Profiles.ValidateProfiles();
         }
+
+		public static bool NewProfileFolderIsNull()
+		{
+			return !Directory.Exists(ProfilesDirectory) && ProfilesDirectory.Length > 0;
+
+        }
+		/// <summary>
+		/// Post 1.3.2, profiles have been restored to the game mod folder over being in the user settings. 
+		/// 
+		/// This function is to validate that profiles have been moved for users so no settings are lost. 
+		/// </summary>
+		public static void ValidateProfileFolder()
+		{
+			Logger.Log("===");
+			Logger.Log("Validating Profiles...");
+
+			Logger.Log($"Current Game: {App.CurrentGame.id}");
+			if (App.CurrentGame?.id == GameEntry.GameType.Unsupported)
+			{
+				Logger.Log("Unknown or invalid game ID, nothing to validate!");
+				Logger.Log("===");
+				return;
+			}
+
+			App.RemoveExeFromPath();
+
+            Logger.Log($"Is Portable Mode: {SettingsManager.IsPortableMode()}");
+			Logger.Log($"Old Profile Directory: {App.CurrentGame.ProfilesDirectory}");
+			Logger.Log($"New Profile Directory: {ProfilesDirectory}");
+
+			if (NewProfileFolderIsNull() == true)
+			{
+				Logger.Log("New Profile Directory does not exist. Path is populated.");
+				// As we are validating the new folder, we are also going with the simplest solution.
+				// If the new profiles folder exists, assume everything was migrated. Normal users shouldn't have any problems with this.
+
+				Logger.Log($"Creating new Profile directory.");
+				Util.CreateSafeDirectory(ProfilesDirectory);
+				Logger.Log("New Profiles directory created.");
+
+				Logger.Log($"Checking if Old Profiles exist.");
+				if (Directory.Exists(App.CurrentGame.ProfilesDirectory))
+				{
+					Logger.Log("Old Profile Directory exists. Migrating Profiles.");
+					Util.CopyAllFiles(App.CurrentGame.ProfilesDirectory, ProfilesDirectory);
+				}
+			}
+
+			Logger.Log("===");
+		}
     }
 }
